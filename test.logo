@@ -1,0 +1,27 @@
+; this is an example logo file
+
+clearscreen
+
+to square :size
+    pu
+    fd :size / 2
+    lt 90
+    pd
+    fd :size / 2
+    lt 90
+    fd :size
+    lt 90
+    fd :size
+    lt 90
+    fd :size
+    lt 90
+    fd :size / 2
+    pu
+    rt 90
+    bk :size / 2
+    pd
+end
+
+square 50
+square 100
+square 200
