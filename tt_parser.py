@@ -123,45 +123,54 @@ class Parser:
     @staticmethod
     def ParseStreamElements(CodeText, ProcName):
         Elements = []
-        inBracket = False
+        bracketDepth = 0
         while len(CodeText) > 0:
             CodeText = CodeText.strip()
             elemtext = CodeText[0]
             CodeText = CodeText[1:]
+            # first, parse any open or closing brackets
             if elemtext == '[':
                 Elements.append((ElemType.OPEN_BRACKET, elemtext))
-                inBracket = True
+                bracketDepth += 1
                 continue
             elif elemtext == ']':
+                if bracketDepth <= 0:
+                    print "Syntax error: unmatched closing bracket ']' in procedure '%s'" % ProcName
+                    return None
                 Elements.append((ElemType.CLOSE_BRACKET, elemtext))
-                inBracket = False
+                bracketDepth -= 1
                 continue
-            elif elemtext == '(':
-                Elements.append((ElemType.OPEN_PAREN, elemtext))
-                continue
-            elif elemtext == ')':
-                Elements.append((ElemType.CLOSE_PAREN, elemtext))
-                continue
-            elif elemtext in '+-*/' and not inBracket:
-                Elements.append((ElemType.INFIX_NUM, elemtext))
-                continue
-            elif elemtext in '<=>' and not inBracket:
-                if (elemtext == '<' and (CodeText[0] == '=' or CodeText[0] == '>')) or (elemtext == '>' and CodeText[0] == '='):
-                    elemtext = elemtext + CodeText[0]
-                    CodeText = CodeText[1:]
-                Elements.append((ElemType.INFIX_BOOL, elemtext))
-                continue
-            elif elemtext == '"':
-                elemtype = ElemType.QUOTED_WORD
-            elif elemtext == ':':
-                elemtype = ElemType.VAR_VALUE
-            elif elemtext in '0123456789':
-                elemtype = ElemType.NUMBER
+            # Next, only tokenize the other elements if we are _not_ inside of a list (brackets)
+            if bracketDepth == 0:
+                if elemtext == '(':
+                    Elements.append((ElemType.OPEN_PAREN, elemtext))
+                    continue
+                elif elemtext == ')':
+                    Elements.append((ElemType.CLOSE_PAREN, elemtext))
+                    continue
+                elif elemtext in '+-*/':
+                    Elements.append((ElemType.INFIX_NUM, elemtext))
+                    continue
+                elif elemtext in '<=>':
+                    if (elemtext == '<' and (CodeText[0] == '=' or CodeText[0] == '>')) or (elemtext == '>' and CodeText[0] == '='):
+                        elemtext = elemtext + CodeText[0]
+                        CodeText = CodeText[1:]
+                    Elements.append((ElemType.INFIX_BOOL, elemtext))
+                    continue
+                elif elemtext == '"':
+                    elemtype = ElemType.QUOTED_WORD
+                elif elemtext == ':':
+                    elemtype = ElemType.VAR_VALUE
+                elif elemtext in '0123456789':
+                    elemtype = ElemType.NUMBER
+                else:
+                    elemtype = ElemType.UNQUOT_WORD
             else:
+                # we are inside of a list, so everything is a word
                 elemtype = ElemType.UNQUOT_WORD
             # determine the separators and scoop up this element
-            if inBracket:
-                dividers = ' ]'
+            if bracketDepth != 0:
+                dividers = ' []'
             elif elemtype == ElemType.QUOTED_WORD:
                 dividers = ' []()'
             else:
@@ -170,19 +179,19 @@ class Parser:
                 elemtext = elemtext + CodeText[0]
                 CodeText = CodeText[1:]
             # check for immediate booleans
-            if elemtype == ElemType.UNQUOT_WORD and (elemtext.lower() == "true" or elemtext.lower() == "false"):
+            if elemtype == ElemType.UNQUOT_WORD and bracketDepth == 0 and (elemtext.lower() == "true" or elemtext.lower() == "false"):
                 elemtype == ElemType.BOOLEAN
             # check for invalid elements
             if elemtext == '"':
                 print "Syntax error: emtpy quotation mark in procedure '%s'" % ProcName
-                return
+                return None
             if elemtext == ':':
                 print "Syntax error: emtpy dots in procedure '%s'" % ProcName
-                return
+                return None
             # everything's good, add this element to the list
             Elements.append((elemtype, elemtext))
-        if inBracket:
-            print "Syntax error: unmatched [] bracket in procedure '%s'" % ProcName
+        if bracketDepth != 0:
+            print "Syntax error: unmatched [] brackets in procedure '%s'" % ProcName
             return None
         return Elements
 
@@ -217,5 +226,4 @@ from tt_procedure import *
 from tt_instruction import *
 from tt_builtin import *
 from tt_types import *
-
 
