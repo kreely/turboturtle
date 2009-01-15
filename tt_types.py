@@ -27,7 +27,8 @@ class ParamType:
     ANYTHING = 2
     BOOLEAN = 3
     NUMBER = 4
-    LIST = 5
-    ARRAY = 6
-    QUOTEDWORD = 7
+    LISTCODE = 5
+    LISTNUM = 6
+    ARRAY = 7
+    QUOTEDWORD = 8
 

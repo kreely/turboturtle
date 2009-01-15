@@ -31,12 +31,24 @@ class Argument:
             return True
         elif elemtype == ElemType.OPEN_BRACKET:
             CodeElements.pop(0)
-            self.ArgType = ParamType.LIST
-            while True:
+            bracketDepth = 1
+            # assume that it's a numeric list at the start, and if any non-numbers are found then we'll call it a code list instead
+            self.ArgType = ParamType.LISTNUM
+            while len(CodeElements) > 0:
                 elem = CodeElements.pop(0)
+                if elem[0] == ElemType.OPEN_BRACKET:
+                    bracketDepth += 1
                 if elem[0] == ElemType.CLOSE_BRACKET:
-                    break
+                    bracketDepth -= 1
+                    if bracketDepth == 0:
+                        break
                 self.AddElement(elem[0], elem[1], None)
+                for ch in elem[1]:
+                    if not (ch.isdigit() or ch == '.' or ch =='[' or ch == ']'):
+                        self.ArgType = ParamType.LISTCODE
+            if bracketDepth != 0:
+                print "Syntax error: List ended with unclosed bracket in procedure '%s'" % ProcName
+                return False
             return True
         # otherwise, assume that we are parsing either a boolean or numeric expression
         parenDepth = 0
