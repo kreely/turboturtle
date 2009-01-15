@@ -63,6 +63,15 @@ class Parser:
                         print "Syntax error: missing dots in parameter \"%s\" name for procedure \"%s\"" % (name, procname)
                         return (None, None)
                     varnames.append(name[1:])
+                # check for invalid procedure name
+                if procname.lower() == 'to' or procname.lower() == 'end' or procname.lower() == 'true' or procname.lower() == 'false':
+                    print "Syntax error: invalid procedure name: protected word '%s'" % procname
+                    return (None, None)
+                # check for built-in function with same name
+                duplist = [proc for proc in Builtin._procs if proc.FullName == procname.lower() or proc.AbbrevName == procname.lower() ]
+                if len(duplist) > 0:
+                    print "Syntax error: procedure '%s' name is duplicate of built-in procedure" % procname
+                    return (None, None)
                 # check for duplicate definition
                 duplist = [proc for proc in Procedures if proc.Name.lower() == procname.lower()]
                 if len(duplist) > 0:
