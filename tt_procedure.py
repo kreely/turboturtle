@@ -11,6 +11,7 @@ class Procedure:
         self.CodeText = ""
         self.Name = Name
         self.InputVariables = []
+        self.Instructions = []
         for varname in InputVars:
             newvar = Variable(varname)
             self.InputVariables.append(newvar)

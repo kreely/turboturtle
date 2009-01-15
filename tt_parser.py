@@ -4,9 +4,6 @@
 # Copyright (c) 2009 by Richard Goedeken
 #--------------------------------------------------
 
-from tt_procedure import *
-from tt_variable import *
-
 class Parser:
     def __init__(self):
         pass
@@ -107,4 +104,118 @@ class Parser:
             print "Syntax error: No END found for procedure \"%s\"" % CurProc.Name
             return (None, None)
         return (MainCode, Procedures)
+
+    @staticmethod
+    def ParseInstructions(CodeText, ProcName, Procedures):
+        # parse the instruction stream into a list of elements
+        Elements = Parser.ParseStreamElements(CodeText, ProcName)
+        if Elements is None:
+            return None
+        # pull instructions out of the element list
+        Instructions = []
+        while len(Elements) > 0:
+            instruction = Parser.GetSingleInstruction(Elements, ProcName, Procedures)
+            if instruction is None:
+                return None
+            Instructions.append(instruction)
+        return Instructions
+
+    @staticmethod
+    def ParseStreamElements(CodeText, ProcName):
+        Elements = []
+        inBracket = False
+        while len(CodeText) > 0:
+            CodeText = CodeText.strip()
+            elemtext = CodeText[0]
+            CodeText = CodeText[1:]
+            if elemtext == '[':
+                Elements.append((ElemType.OPEN_BRACKET, elemtext))
+                inBracket = True
+                continue
+            elif elemtext == ']':
+                Elements.append((ElemType.CLOSE_BRACKET, elemtext))
+                inBracket = False
+                continue
+            elif elemtext == '(':
+                Elements.append((ElemType.OPEN_PAREN, elemtext))
+                continue
+            elif elemtext == ')':
+                Elements.append((ElemType.CLOSE_PAREN, elemtext))
+                continue
+            elif elemtext in '+-*/' and not inBracket:
+                Elements.append((ElemType.INFIX_NUM, elemtext))
+                continue
+            elif elemtext in '<=>' and not inBracket:
+                if (elemtext == '<' and (CodeText[0] == '=' or CodeText[0] == '>')) or (elemtext == '>' and CodeText[0] == '='):
+                    elemtext = elemtext + CodeText[0]
+                    CodeText = CodeText[1:]
+                Elements.append((ElemType.INFIX_BOOL, elemtext))
+                continue
+            elif elemtext == '"':
+                elemtype = ElemType.QUOTED_WORD
+            elif elemtext == ':':
+                elemtype = ElemType.VAR_VALUE
+            elif elemtext in '0123456789':
+                elemtype = ElemType.NUMBER
+            else:
+                elemtype = ElemType.UNQUOT_WORD
+            # determine the separators and scoop up this element
+            if inBracket:
+                dividers = ' ]'
+            elif elemtype == ElemType.QUOTED_WORD:
+                dividers = ' []()'
+            else:
+                dividers = ' []()+-*/<=>'
+            while len(CodeText) > 0 and CodeText[0] not in dividers:
+                elemtext = elemtext + CodeText[0]
+                CodeText = CodeText[1:]
+            # check for immediate booleans
+            if elemtype == ElemType.UNQUOT_WORD and (elemtext.lower() == "true" or elemtext.lower() == "false"):
+                elemtype == ElemType.BOOLEAN
+            # check for invalid elements
+            if elemtext == '"':
+                print "Syntax error: emtpy quotation mark in procedure '%s'" % ProcName
+                return
+            if elemtext == ':':
+                print "Syntax error: emtpy dots in procedure '%s'" % ProcName
+                return
+            # everything's good, add this element to the list
+            Elements.append((elemtype, elemtext))
+        if inBracket:
+            print "Syntax error: unmatched [] bracket in procedure '%s'" % ProcName
+            return None
+        return Elements
+
+    @staticmethod
+    def GetSingleInstruction(CodeElements, ProcName, Procedures):
+        # look for invalid characters
+        firstelem = CodeElements.pop(0)
+        if firstelem[0] != ElemType.UNQUOT_WORD:
+            print "Syntax error in '%s': Found invalid word '%s' instead of procedure call" % (ProcName, firstelem[1])
+            return None
+        InstructName = firstelem[1]
+        # Search for a procedure with this name
+        builtinlist = [ proc for proc in Builtin._procs if proc.FullName == InstructName.lower() or proc.AbbrevName == InstructName.lower() ]
+        if len(builtinlist) > 0:
+            Instruct = Instruction(InstructName, True, builtinlist[0].nParams, False)
+            if not Instruct.GetArguments(CodeElements, ProcName, Procedures):
+                return None
+        else:
+            proclist = [ proc for proc in Procedures if proc.Name.lower() == InstructName.lower() ]
+            if len(proclist) > 0:
+                Instruct = Instruction(InstructName, False, len(proclist[0].InputVariables), False)
+                if not Instruct.GetArguments(CodeElements, ProcName, Procedures):
+                    return None
+            else:
+                print "Syntax error: invalid instruction named '%s' found while parsing '%s'" % (InstructName, ProcName)
+                return None
+        return Instruct
+
+# the imports are at the bottom of this file to get around a python problem caused by
+# an unavoidable circular dependency among the Parser, Instruction, and Argument classes
+from tt_procedure import *
+from tt_instruction import *
+from tt_builtin import *
+from tt_types import *
+
 
