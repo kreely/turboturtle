@@ -52,7 +52,7 @@ class TT_App:
         if self.MainCode == None or self.Procedures == None:
             return
         # the next step is to parse instructions for the main code and the subroutines
-        self.MainInstructions = Parser.ParseInstructions(self.MainCode, 'global', self.Procedures)
+        self.MainInstructions = Parser.ParseInstructions(self.MainCode, None, self.Procedures)
         if self.MainInstructions is None:
             return
         for proc in self.Procedures:
@@ -62,16 +62,16 @@ class TT_App:
         # fixme debug
         print "Main Code: %s\nMain Instructions:" % self.MainCode
         for instruct in self.MainInstructions:
-            self.PrintInstruction(instruct, 0)
+            self.InstructPrint(instruct, 0)
         for proc in self.Procedures:
             print "Procedure '%s':" % proc.Name
             print "    Inputs: %s" % ",".join([var.Name for var in proc.InputVariables])
             print "    Code: %s" % proc.CodeText
             print "    Instructions:"
             for instruct in proc.Instructions:
-                self.PrintInstruction(instruct, 0)
+                self.InstructPrint(instruct, 0)
 
-    def PrintInstruction(self, instruct, indent):
+    def InstructPrint(self, instruct, indent):
         print " " * indent + "Name: %s" % instruct.Name
         indent += 4
         for arg in instruct.Arguments:

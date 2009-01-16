@@ -22,6 +22,7 @@ class Argument:
         self.ElemInstr.append(Instruction)
 
     def ParseFromCodeElements(self, CodeElements, ProcName, Procedures):
+        ErrProcName = ProcName or 'global'
         elemtype = CodeElements[0][0]
         # check for the easy ones first
         if elemtype == ElemType.QUOTED_WORD:
@@ -47,7 +48,7 @@ class Argument:
                     if not (ch.isdigit() or ch == '.' or ch =='[' or ch == ']'):
                         self.ArgType = ParamType.LISTCODE
             if bracketDepth != 0:
-                print "Syntax error: List ended with unclosed bracket in procedure '%s'" % ProcName
+                print "Syntax error: List ended with unclosed bracket in procedure '%s'" % ErrProcName
                 return False
             return True
         # otherwise, assume that we are parsing either a boolean or numeric expression
@@ -55,7 +56,7 @@ class Argument:
         while len(CodeElements) > 0:
             elem = CodeElements.pop(0)
             if elem[0] == ElemType.OPEN_BRACKET or elem[0] == ElemType.CLOSE_BRACKET:
-                print "Syntax error: invalid bracket '%s' found in expression in procedure '%s'" % (elem[1], ProcName)
+                print "Syntax error: invalid bracket '%s' found in expression in procedure '%s'" % (elem[1], ErrProcName)
                 return False
             elif elem[0] == ElemType.OPEN_PAREN:
                 # check for parenthesized built-in procedure calls
@@ -82,7 +83,7 @@ class Argument:
                         if not Instruct.GetArguments(InstrElements, ProcName, Procedures):
                             return False
                         if len(InstrElements) > 0:
-                            print "Syntax error: extraneous code in parenthesized instruction '%s' in procedure '%s'" % (name, ProcName)
+                            print "Syntax error: extraneous code in parenthesized instruction '%s' in procedure '%s'" % (name, ErrProcName)
                             return False
                         self.AddElement(ElemType.FUNC_CALL, name, Instruct)
                         bSpecialProc = True
@@ -91,18 +92,18 @@ class Argument:
                     parenDepth += 1
                     self.AddElement(ElemType.OPEN_PAREN, elem[1], None)
                     if len(CodeElements) == 0:
-                        print "Syntax error: hanging open-parenthesis in procedure '%s'" % ProcName
+                        print "Syntax error: hanging open-parenthesis in procedure '%s'" % ErrProcName
                         return False
                     if CodeElements[0][0] == ElemType.CLOSE_PAREN:
-                        print "Syntax error: empty parenthesis pair in procedure '%s'" % ProcName
+                        print "Syntax error: empty parenthesis pair in procedure '%s'" % ErrProcName
                         return False
                     if CodeElements[0][0] == ElemType.QUOTED_WORD or CodeElements[0][0] == ElemType.INFIX_BOOL or CodeElements[0][0] == ElemType.INFIX_NUM:
-                        print "Syntax error: invalid symbol '%s' after open-parenthesis in procedure '%s'" % (CodeElements[0][1], ProcName)
+                        print "Syntax error: invalid symbol '%s' after open-parenthesis in procedure '%s'" % (CodeElements[0][1], ErrProcName)
                         return False
                     continue
             elif elem[0] == ElemType.CLOSE_PAREN:
                 if parenDepth == 0:
-                    print "Syntax error: unmatched close-parenthesis in procedure '%s'" % ProcName
+                    print "Syntax error: unmatched close-parenthesis in procedure '%s'" % ErrProcName
                     return False
                 parenDepth -= 1
                 self.AddElement(ElemType.CLOSE_PAREN, elem[1], None)
@@ -121,18 +122,18 @@ class Argument:
             elif elem[0] == ElemType.INFIX_NUM or elem[0] == ElemType.INFIX_BOOL:
                 self.AddElement(elem[0], elem[1], None)
                 if len(CodeElements) == 0:
-                    print "Syntax error: hanging infix '%s' in expression in procedure '%s'" % (elem[1], ProcName)
+                    print "Syntax error: hanging infix '%s' in expression in procedure '%s'" % (elem[1], ErrProcName)
                     return False
                 if CodeElements[0][0] == ElemType.CLOSE_PAREN:
-                    print "Syntax error: missing value between '%s' and '%s' in procedure '%s'" % (elem[1], CodeElements[0][1], ProcName)
+                    print "Syntax error: missing value between '%s' and '%s' in procedure '%s'" % (elem[1], CodeElements[0][1], ErrProcName)
                     return False
                 if CodeElements[0][0] == ElemType.QUOTED_WORD or CodeElements[0][0] == ElemType.INFIX_BOOL or CodeElements[0][0] == ElemType.INFIX_NUM:
-                    print "Syntax error: invalid symbol '%s' after operator '%s' in procedure '%s'" % (CodeElements[0][1], elem[1], ProcName)
+                    print "Syntax error: invalid symbol '%s' after operator '%s' in procedure '%s'" % (CodeElements[0][1], elem[1], ErrProcName)
                     return False
                 continue
             # unknown element type or bug
             else:
-                print "Syntax error: unknown element code %i in text '%s' from procedure '%s'" % (int(elem[0]), elem[1], ProcName)
+                print "Syntax error: unknown element code %i in text '%s' from procedure '%s'" % (int(elem[0]), elem[1], ErrProcName)
                 return False
             if len(CodeElements) == 0:
                 break
@@ -142,7 +143,7 @@ class Argument:
                 break
         # check parenthesis depth
         if parenDepth != 0:
-            print "Syntax error: Expression ended with unclosed parenthesis in procedure '%s'.  Missing operator or closing parenthesis?" % ProcName
+            print "Syntax error: Expression ended with unclosed parenthesis in procedure '%s'.  Missing operator or closing parenthesis?" % ErrProcName
             return False
         return True
 

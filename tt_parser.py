@@ -116,6 +116,7 @@ class Parser:
 
     @staticmethod
     def ParseStreamElements(CodeText, ProcName):
+        ErrProcName = ProcName or 'global'
         Elements = []
         bracketDepth = 0
         while len(CodeText) > 0:
@@ -129,7 +130,7 @@ class Parser:
                 continue
             elif elemtext == ']':
                 if bracketDepth <= 0:
-                    print "Syntax error: unmatched closing bracket ']' in procedure '%s'" % ProcName
+                    print "Syntax error: unmatched closing bracket ']' in procedure '%s'" % ErrProcName
                     return None
                 Elements.append((ElemType.CLOSE_BRACKET, elemtext))
                 bracketDepth -= 1
@@ -177,15 +178,15 @@ class Parser:
                 elemtype == ElemType.BOOLEAN
             # check for invalid elements
             if elemtext == '"':
-                print "Syntax error: emtpy quotation mark in procedure '%s'" % ProcName
+                print "Syntax error: emtpy quotation mark in procedure '%s'" % ErrProcName
                 return None
             if elemtext == ':':
-                print "Syntax error: emtpy dots in procedure '%s'" % ProcName
+                print "Syntax error: emtpy dots in procedure '%s'" % ErrProcName
                 return None
             # everything's good, add this element to the list
             Elements.append((elemtype, elemtext))
         if bracketDepth != 0:
-            print "Syntax error: unmatched [] brackets in procedure '%s'" % ProcName
+            print "Syntax error: unmatched [] brackets in procedure '%s'" % ErrProcName
             return None
         return Elements
 
@@ -225,10 +226,11 @@ class Parser:
 
     @staticmethod
     def GetSingleInstruction(CodeElements, ProcName, Procedures):
+        ErrProcName = ProcName or 'global'
         # look for invalid characters
         firstelem = CodeElements.pop(0)
         if firstelem[0] != ElemType.UNQUOT_WORD:
-            print "Syntax error in '%s': Found invalid word '%s' instead of procedure call" % (ProcName, firstelem[1])
+            print "Syntax error in '%s': Found invalid word '%s' instead of procedure call" % (ErrProcName, firstelem[1])
             return None
         InstructName = firstelem[1]
         # Search for a procedure with this name
@@ -244,7 +246,7 @@ class Parser:
                 if not Instruct.GetArguments(CodeElements, ProcName, Procedures):
                     return None
             else:
-                print "Syntax error: invalid instruction named '%s' found while parsing '%s'" % (InstructName, ProcName)
+                print "Syntax error: invalid instruction named '%s' found while parsing '%s'" % (InstructName, ErrProcName)
                 return None
         return Instruct
 
