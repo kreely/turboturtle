@@ -79,11 +79,11 @@ class TT_App:
             for i in range(arg.nElem):
                 print "<%s> " % arg.ElemText[i],
                 if arg.ElemTypes[i] == ElemType.FUNC_CALL:
-                    self.PrintInstruction(arg.ElemInstr[i], indent + 4)
+                    self.InstructPrint(arg.ElemInstr[i], indent + 4)
             print
             if arg.ArgType == ParamType.LISTCODE:
                 for instr in arg.ElemInstr:
-                    self.PrintInstruction(instr, indent + 4)
+                    self.InstructPrint(instr, indent + 4)
 
 # this function is executed when this script is run (not imported)
 if __name__ == '__main__':
