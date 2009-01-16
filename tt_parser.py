@@ -115,21 +115,6 @@ class Parser:
         return (MainCode, Procedures)
 
     @staticmethod
-    def ParseInstructions(CodeText, ProcName, Procedures):
-        # parse the instruction stream into a list of elements
-        Elements = Parser.ParseStreamElements(CodeText, ProcName)
-        if Elements is None:
-            return None
-        # pull instructions out of the element list
-        Instructions = []
-        while len(Elements) > 0:
-            instruction = Parser.GetSingleInstruction(Elements, ProcName, Procedures)
-            if instruction is None:
-                return None
-            Instructions.append(instruction)
-        return Instructions
-
-    @staticmethod
     def ParseStreamElements(CodeText, ProcName):
         Elements = []
         bracketDepth = 0
@@ -203,6 +188,40 @@ class Parser:
             print "Syntax error: unmatched [] brackets in procedure '%s'" % ProcName
             return None
         return Elements
+
+    @staticmethod
+    def ParseInstructions(CodeText, ProcName, Procedures):
+        # parse the instruction stream into a list of elements
+        Elements = Parser.ParseStreamElements(CodeText, ProcName)
+        if Elements is None:
+            return None
+        # pull instructions out of the element list
+        Instructions = []
+        while len(Elements) > 0:
+            instruction = Parser.GetSingleInstruction(Elements, ProcName, Procedures)
+            if instruction is None:
+                return None
+            Instructions.append(instruction)
+        # parse the Instruction lists in procedure arguments
+        for instr in Instructions:
+            for arg in instr.Arguments:
+                if arg.ArgType == ParamType.LISTCODE:
+                    # convert the list (without brackets) back to text, and re-read the elements as a new instructions
+                    codelisttext = " ".join(arg.ElemText)
+                    codelistelems = Parser.ParseStreamElements(codelisttext, ProcName)
+                    # pull instructions out of the element list
+                    instr_codelist = []
+                    while len(codelistelems) > 0:
+                        instruction = Parser.GetSingleInstruction(codelistelems, ProcName, Procedures)
+                        if instruction is None:
+                            return None
+                        instr_codelist.append(instruction)
+                    # store this list of instructions in this argument.  this removes the original element lists
+                    arg.nElem = 1
+                    arg.ElemTypes = [ ElemType.CODE_LIST ]
+                    arg.ElemText = [ codelisttext ]
+                    arg.ElemInstr = instr_codelist
+        return Instructions
 
     @staticmethod
     def GetSingleInstruction(CodeElements, ProcName, Procedures):

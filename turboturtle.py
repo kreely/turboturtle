@@ -60,19 +60,30 @@ class TT_App:
             if proc.Instructions is None:
                 return
         # fixme debug
-        print "Main Code: %s" % self.MainCode
+        print "Main Code: %s\nMain Instructions:" % self.MainCode
+        for instruct in self.MainInstructions:
+            self.PrintInstruction(instruct, 0)
         for proc in self.Procedures:
             print "Procedure '%s':" % proc.Name
             print "    Inputs: %s" % ",".join([var.Name for var in proc.InputVariables])
             print "    Code: %s" % proc.CodeText
             print "    Instructions:"
             for instruct in proc.Instructions:
-                print "        Name: %s" % instruct.Name
-                for arg in instruct.Arguments:
-                    print "            Arg: ",
-                    for elem in arg.ElemText:
-                        print "<%s> " % elem,
-                    print
+                self.PrintInstruction(instruct, 0)
+
+    def PrintInstruction(self, instruct, indent):
+        print " " * indent + "Name: %s" % instruct.Name
+        indent += 4
+        for arg in instruct.Arguments:
+            print " " * indent + "Arg: ",
+            for i in range(arg.nElem):
+                print "<%s> " % arg.ElemText[i],
+                if arg.ElemTypes[i] == ElemType.FUNC_CALL:
+                    self.PrintInstruction(arg.ElemInstr[i], indent + 4)
+            print
+            if arg.ArgType == ParamType.LISTCODE:
+                for instr in arg.ElemInstr:
+                    self.PrintInstruction(instr, indent + 4)
 
 # this function is executed when this script is run (not imported)
 if __name__ == '__main__':

@@ -19,6 +19,7 @@ class ElemType:
     VAR_VALUE = 10
     UNQUOT_WORD = 11
     FUNC_CALL = 11  # that's right, a function call and an unquoted word are the same
+    CODE_LIST = 12
 
 class ParamType:
     # procedure input/output parameter types
