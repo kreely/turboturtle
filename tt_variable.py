@@ -4,14 +4,18 @@
 # Copyright (c) 2009 by Richard Goedeken
 #--------------------------------------------------
 
+from tt_types import *
+
 class Variable:
-    # define variable types
-    UNKNOWN = 0
-    NUMBER = 1
-    LIST = 2
-    ARRAY = 3
-    
     def __init__(self, Name):
         self.Name = Name
-        self.Type = Variable.UNKNOWN
+        self.Type = ParamType.UNKNOWN
+
+    def SetType(self, Type):
+        allowedtypes = (ParamType.UNKNOWN, ParamType.BOOLEAN, ParamType.NUMBER, ParamType.LISTNUM, ParamType.ARRAY, ParamType.QUOTEDWORD)
+        if Type not in allowedtypes:
+            return False
+        self.Type = Type
+        return True
+
 
