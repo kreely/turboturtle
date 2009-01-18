@@ -68,6 +68,14 @@ class TT_App:
             for instruct in proc.Instructions:
                 if not TT_App.RecurseInstruction(TT_App.CreateVarFromInstruct, instruct, proc.Name, self.GlobalVariables, proc.LocalVariables):
                     return
+        # check for instruction arguments using un-defined variables
+        for instruct in self.MainInstructions:
+            if not TT_App.RecurseInstruction(TT_App.CheckVariables, instruct, None, self.GlobalVariables, None):
+                return
+        for proc in self.Procedures:
+            for instruct in proc.Instructions:
+                if not TT_App.RecurseInstruction(TT_App.CheckVariables, instruct, proc.Name, self.GlobalVariables, proc.LocalVariables):
+                    return
 
         # fixme debug
         print "Main Code: %s\nMain Instructions:" % self.MainCode
@@ -189,9 +197,23 @@ class TT_App:
         if not newvar.SetType(vartype):
             print "Syntax error: An object of type '%s' cannot be assigned to variable '%s' in '%s'" % (ParamType.Names[vartype], varname, ErrProcName)
             return False
-        print "created variable %s with type %i" % (varname, vartype)
         # add a reference to the new Variable to the VarList
         VarList.append(newvar)
+        return True
+
+    # Check an instruction for any arguments using values stored in variables, and
+    # make sure that the variable names are defined (ie, there is no missing MAKE)
+    @staticmethod
+    def CheckVariables(Instruct, ProcName, GlobalVariables, LocalVariables):
+        ErrProcName = ProcName or 'global'
+        for arg in Instruct.Arguments:
+            for i in range(arg.nElem):
+                if arg.ElemTypes[i] == ElemType.VAR_VALUE:
+                    varname = arg.ElemText[i][1:]
+                    if len([ var for var in GlobalVariables if var.Name.lower() == varname.lower() ]) == 0:
+                        if LocalVariables is None or len([ var for var in LocalVariables if var.Name.lower() == varname.lower() ]) == 0:
+                            print "Syntax error: variable '%s' in procedure '%s' is not defined (no MAKE instruction)" % (varname, ErrProcName)
+                            return False
         return True
 
 
