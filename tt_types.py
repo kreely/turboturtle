@@ -33,3 +33,13 @@ class ParamType:
     ARRAY = 7
     QUOTEDWORD = 8
 
+    Names = { UNKNOWN    : "Unknown",
+              NOTHING    : "Nothing",
+              ANYTHING   : "Anything",
+              BOOLEAN    : "Boolean",
+              NUMBER     : "Number",
+              LISTCODE   : "List of code",
+              LISTNUM    : "List of numbers",
+              ARRAY      : "Array",
+              QUOTEDWORD : "Quoted word" }
+
