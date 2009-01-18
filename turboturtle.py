@@ -64,10 +64,10 @@ class TT_App:
         for instruct in self.MainInstructions:
             if not TT_App.RecurseInstruction(TT_App.CreateVarFromInstruct, instruct, None, self.GlobalVariables, None):
                 return
-            for proc in self.Procedures:
-                for instruct in proc.Instructions:
-                    if not TT_App.RecurseInstruction(TT_App.CreateVarFromInstruct, instruct, proc.Name, self.GlobalVariables, proc.LocalVariables):
-                        return
+        for proc in self.Procedures:
+            for instruct in proc.Instructions:
+                if not TT_App.RecurseInstruction(TT_App.CreateVarFromInstruct, instruct, proc.Name, self.GlobalVariables, proc.LocalVariables):
+                    return
 
         # fixme debug
         print "Main Code: %s\nMain Instructions:" % self.MainCode
