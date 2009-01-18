@@ -4,9 +4,6 @@
 # Copyright (c) 2009 by Richard Goedeken
 #--------------------------------------------------
 
-from tt_types import *
-from tt_parser import *
-
 class Argument:
     def __init__(self):
         self.ArgType = ParamType.UNKNOWN
@@ -47,9 +44,13 @@ class Argument:
                 for ch in elem[1]:
                     if not (ch.isdigit() or ch == '.' or ch =='[' or ch == ']'):
                         self.ArgType = ParamType.LISTCODE
+            # check bracket pairing
             if bracketDepth != 0:
                 print "Syntax error: List ended with unclosed bracket in procedure '%s'" % ErrProcName
                 return False
+            # set elements to NUMBER type if this is a LISTNUM
+            if self.ArgType == ParamType.LISTNUM:
+                self.ElemTypes = [ ElemType.NUMBER ] * self.nElem
             return True
         # otherwise, assume that we are parsing either a boolean or numeric expression
         parenDepth = 0
@@ -97,7 +98,7 @@ class Argument:
                     if CodeElements[0][0] == ElemType.CLOSE_PAREN:
                         print "Syntax error: empty parenthesis pair in procedure '%s'" % ErrProcName
                         return False
-                    if CodeElements[0][0] == ElemType.QUOTED_WORD or CodeElements[0][0] == ElemType.INFIX_BOOL or CodeElements[0][0] == ElemType.INFIX_NUM:
+                    if CodeElements[0][0] == ElemType.QUOTED_WORD or CodeElements[0][0] == ElemType.INFIX_BOOL or (CodeElements[0][0] == ElemType.INFIX_NUM and CodeElements[0][1] != '-'):
                         print "Syntax error: invalid symbol '%s' after open-parenthesis in procedure '%s'" % (CodeElements[0][1], ErrProcName)
                         return False
                     continue
@@ -127,7 +128,7 @@ class Argument:
                 if CodeElements[0][0] == ElemType.CLOSE_PAREN:
                     print "Syntax error: missing value between '%s' and '%s' in procedure '%s'" % (elem[1], CodeElements[0][1], ErrProcName)
                     return False
-                if CodeElements[0][0] == ElemType.QUOTED_WORD or CodeElements[0][0] == ElemType.INFIX_BOOL or CodeElements[0][0] == ElemType.INFIX_NUM:
+                if CodeElements[0][0] == ElemType.QUOTED_WORD or CodeElements[0][0] == ElemType.INFIX_BOOL or (CodeElements[0][0] == ElemType.INFIX_NUM and CodeElements[0][1] != '-'):
                     print "Syntax error: invalid symbol '%s' after operator '%s' in procedure '%s'" % (CodeElements[0][1], elem[1], ErrProcName)
                     return False
                 continue
@@ -174,4 +175,8 @@ class Instruction:
             self.Arguments.append(newarg)
         return True
 
+# the imports are at the bottom of this file to get around a python problem caused by
+# an unavoidable circular dependency among the Parser, Instruction, and Argument classes
+from tt_types import *
+from tt_parser import *
 
