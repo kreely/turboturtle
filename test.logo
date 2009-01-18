@@ -10,12 +10,7 @@ to square :size
     lt 90
     pd
     fd :size / 2
-    lt 90
-    fd :size
-    lt 90
-    fd :size
-    lt 90
-    fd :size
+    repeat 3 [lt 90 fd :size]
     lt 90
     fd :size / 2
     pu
@@ -23,6 +18,7 @@ to square :size
     bk :size / 2
     pd
 end
+
 
 square 50
 square 100
