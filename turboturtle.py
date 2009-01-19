@@ -97,12 +97,12 @@ class TT_App:
             return False
         # recurse through other instructions
         for arg in instruct.Arguments:
-            for i in range(arg.nElem):
-                if arg.ElemTypes[i] == ElemType.FUNC_CALL:
-                    if not TT_App.RecurseInstruction(pFunction, arg.ElemInstr[i], *extraargs):
+            for elem in arg.Elements:
+                if elem.Type == ElemType.FUNC_CALL:
+                    if not TT_App.RecurseInstruction(pFunction, elem.pInstruct, *extraargs):
                         return False
             if arg.ArgType == ParamType.LISTCODE:
-                for instr in arg.ElemInstr:
+                for instr in arg.Elements[0].pInstruct:
                     if not TT_App.RecurseInstruction(pFunction, instr, *extraargs):
                         return False
         return True
@@ -113,13 +113,13 @@ class TT_App:
         indent += 4
         for arg in instruct.Arguments:
             print " " * indent + "Arg: ",
-            for i in range(arg.nElem):
-                print "<%s> " % arg.ElemText[i],
-                if arg.ElemTypes[i] == ElemType.FUNC_CALL:
-                    self.InstructPrint(arg.ElemInstr[i], indent + 4)
+            for elem in arg.Elements:
+                print "<%s> " % elem.Text,
+                if elem.Type == ElemType.FUNC_CALL:
+                    self.InstructPrint(elem.pInstruct, indent + 4)
             print
             if arg.ArgType == ParamType.LISTCODE:
-                for instr in arg.ElemInstr:
+                for instr in arg.Elements[0].pInstruct:
                     self.InstructPrint(instr, indent + 4)
 
     # functions for parsing Instruction objects out of code text
@@ -147,7 +147,7 @@ class TT_App:
         for arg in Instruct.Arguments:
             if arg.ArgType == ParamType.LISTCODE:
                 # convert the list (without brackets) back to text, and re-read the elements as a new instructions
-                codelisttext = " ".join(arg.ElemText)
+                codelisttext = " ".join([elem.Text for elem in arg.Elements])
                 codelistelems = Parser.ParseStreamElements(codelisttext, ProcName)
                 # pull instructions out of the element list
                 instr_codelist = []
@@ -157,10 +157,7 @@ class TT_App:
                         return False
                     instr_codelist.append(instruction)
                 # store this list of instructions in this argument.  this removes the original element lists
-                arg.nElem = 1
-                arg.ElemTypes = [ ElemType.CODE_LIST ]
-                arg.ElemText = [ codelisttext ]
-                arg.ElemInstr = instr_codelist
+                arg.Elements = [ Element(ElemType.CODE_LIST, codelisttext, instr_codelist) ]
         return True
 
     # functions to allocate a global or local variable from a MAKE or LOCALMAKE procedure call
@@ -188,7 +185,7 @@ class TT_App:
             print "Syntax error: First input to MAKE/LOCALMAKE instructions must be a quoted word in '%s'" % ErrProcName
             return False
         # if the variable already exists, then no problem
-        varname = Instruct.Arguments[0].ElemText[0][1:]
+        varname = Instruct.Arguments[0].Elements[0].Text[1:]
         vartype = Instruct.Arguments[1].ArgType
         if len([var for var in VarList if var.Name.lower() == varname.lower()]) > 0:
             return True
@@ -201,19 +198,27 @@ class TT_App:
         VarList.append(newvar)
         return True
 
-    # Check an instruction for any arguments using values stored in variables, and
-    # make sure that the variable names are defined (ie, there is no missing MAKE)
+    # Check an instruction for any arguments using values stored in variables
+    # Make sure that the variable names are defined (ie, there is no missing MAKE/LOCALMAKE)
+    # Add references to the Variable object into elements with type VAR_VALUE
     @staticmethod
     def CheckVariables(Instruct, ProcName, GlobalVariables, LocalVariables):
         ErrProcName = ProcName or 'global'
         for arg in Instruct.Arguments:
-            for i in range(arg.nElem):
-                if arg.ElemTypes[i] == ElemType.VAR_VALUE:
-                    varname = arg.ElemText[i][1:]
-                    if len([ var for var in GlobalVariables if var.Name.lower() == varname.lower() ]) == 0:
-                        if LocalVariables is None or len([ var for var in LocalVariables if var.Name.lower() == varname.lower() ]) == 0:
-                            print "Syntax error: variable '%s' in procedure '%s' is not defined (no MAKE instruction)" % (varname, ErrProcName)
-                            return False
+            for elem in arg.Elements:
+                if elem.Type == ElemType.VAR_VALUE:
+                    varname = elem.Text[1:]
+                    if LocalVariables is not None:
+                        localvars = [ var for var in LocalVariables if var.Name.lower() == varname.lower() ]
+                        if len(localvars) > 0:
+                            elem.pVariable = localvars[0]
+                            continue
+                    globalvars = [ var for var in GlobalVariables if var.Name.lower() == varname.lower() ]
+                    if len(globalvars) > 0:
+                        elem.pVariable = globalvars[0]
+                        continue
+                    print "Syntax error: variable '%s' in procedure '%s' is not defined (no MAKE instruction)" % (varname, ErrProcName)
+                    return False
         return True
 
 
