@@ -96,7 +96,7 @@ class TT_App:
                 nFixups += newfix
             for proc in self.Procedures:
                 for instruct in proc.Instructions:
-                    newfix = self.FixupRecurse(instruct, proc.Name)
+                    newfix = self.FixupRecurse(instruct, proc)
                     if newfix == None:
                         return
                     nFixups += newfix
@@ -135,10 +135,10 @@ class TT_App:
                         return False
         return True
     # recursive instruction walking loop, for fixing up data types
-    def FixupRecurse(self, pInstruct, ProcName):
+    def FixupRecurse(self, pInstruct, pCodeProc):
         nFixups = 0
         # call the function to fixup a single instruction
-        newfix = self.FixupInstruction(pInstruct, ProcName)
+        newfix = self.FixupInstruction(pInstruct, pCodeProc)
         if newfix == None:
             return None
         nFixups += newfix
@@ -146,13 +146,13 @@ class TT_App:
         for arg in pInstruct.Arguments:
             for elem in arg.Elements:
                 if elem.Type == ElemType.FUNC_CALL:
-                    newfix = self.FixupRecurse(elem.pInstruct, ProcName)
+                    newfix = self.FixupRecurse(elem.pInstruct, pCodeProc)
                     if newfix == None:
                         return None
                     nFixups += newfix
             if arg.ArgType == ParamType.LISTCODE:
                 for instr in arg.Elements[0].pInstruct:
-                    newfix = self.FixupRecurse(instr, ProcName)
+                    newfix = self.FixupRecurse(instr, pCodeProc)
                     if newfix == None:
                         return None
                     nFixups += newfix
@@ -222,6 +222,9 @@ class TT_App:
                 return False
             if not TT_App.CreateVar(Instruct, ProcName, LocalVariables):
                 return False
+        elif Instruct.Name.lower() == 'output' and (ProcName is None or LocalVariables is None):
+            print "Syntax error: OUTPUT used outside of procedure definition"
+            return False
         return True
     @staticmethod
     def CreateVar(Instruct, ProcName, VarList):
@@ -280,8 +283,11 @@ class TT_App:
         return True
 
     # Basic instruction fix-up function; this gets called iteratively for each instruction in the tree until there are no more fixups
-    def FixupInstruction(self, pInstruct, ProcName):
-        ErrProcName = ProcName or 'global'
+    def FixupInstruction(self, pInstruct, pCodeProc):
+        if pCodeProc is not None:
+            ErrProcName = pCodeProc.Name
+        else:
+            ErrProcName = 'global'
         nFixups = 0
         # start by discovering the ArgType for any arguments with an UNKNOWN type
         for arg in pInstruct.Arguments:
@@ -336,12 +342,22 @@ class TT_App:
         if pInstruct.BuiltIn is True and pInstruct.pProc is not None and (pInstruct.pProc.FullName == 'make' or pInstruct.pProc.FullName == 'localmake'):
             argtype = pInstruct.Arguments[1].ArgType
             if argtype != ParamType.UNKNOWN:
-                if pInstruct.pMakeVar.Type != ParamType.UNKNOWN and pInstruct.pMakeVar.Type != argtype:
-                    print "Logical error: %s instruction setting variable already type '%s' with argument of type '%s'" % (pInstruct.Name, ParamType.Names[pInstruct.MakeVar.Type], ParamType.Names[argtype])
-                    return None
                 if pInstruct.pMakeVar.Type == ParamType.UNKNOWN:
                     pInstruct.pMakeVar.Type = argtype
                     nFixups += 1
+                elif pInstruct.pMakeVar.Type != argtype:
+                    print "Logical error: %s instruction setting variable already type '%s' with argument of type '%s'" % (pInstruct.Name, ParamType.Names[pInstruct.MakeVar.Type], ParamType.Names[argtype])
+                    return None
+        # forward ParamType from OUTPUT argument to procedure return type
+        if pInstruct.BuiltIn is True and pInstruct.pProc is not None and pInstruct.pProc.FullName == 'output':
+            argtype = pInstruct.Arguments[0].ArgType
+            if argtype != ParamType.UNKNOWN:
+                if pCodeProc.ReturnType == ParamType.UNKNOWN:
+                    pCodeProc.ReturnType = argtype
+                    nFixups += 1
+                elif pCodeProc.ReturnType != argtype:
+                    print "Logical error: Procedure '%s' OUTPUTs values of both type '%s' and type '%s'" % (pCodeProc.Name, ParamType.Names[pCodeProc.ReturnType], ParamType.Names[argtype])
+                    return None
         # at the end, return the # of fixups that we did
         return nFixups
 

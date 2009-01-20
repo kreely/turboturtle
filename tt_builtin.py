@@ -42,6 +42,7 @@ Builtin.AddBuiltin("localmake",    None,    ParamType.NOTHING, ParamType.QUOTEDW
 Builtin.AddBuiltin("lput",         None,    ParamType.LISTNUM, ParamType.NUMBER,     ParamType.LISTNUM,  None, False, False)
 Builtin.AddBuiltin("make",         None,    ParamType.NOTHING, ParamType.QUOTEDWORD, ParamType.ANYTHING, None, False, False)
 Builtin.AddBuiltin("mdarray",      None,    ParamType.ARRAY,   ParamType.LISTNUM,    None,               None, False, False)
+Builtin.AddBuiltin("output",       None,    ParamType.NOTHING, ParamType.ANYTHING,   None,               None, False, False)
 Builtin.AddBuiltin("penup",        "pu",    ParamType.NOTHING, None,                 None,               None, False, False)
 Builtin.AddBuiltin("pendown",      "pd",    ParamType.NOTHING, None,                 None,               None, False, False)
 Builtin.AddBuiltin("penerase",     "pe",    ParamType.NOTHING, None,                 None,               None, False, False)
