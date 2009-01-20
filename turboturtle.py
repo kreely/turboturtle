@@ -90,13 +90,13 @@ class TT_App:
             # loop until we don't fix up anything else
             nFixups = 0
             for instruct in self.MainInstructions:
-                newfix = self.FixupRecurse(instruct, None, None)
+                newfix = self.FixupRecurse(instruct, None)
                 if newfix == None:
                     return
                 nFixups += newfix
             for proc in self.Procedures:
                 for instruct in proc.Instructions:
-                    newfix = self.FixupRecurse(instruct, None, proc.Name)
+                    newfix = self.FixupRecurse(instruct, proc.Name)
                     if newfix == None:
                         return
                     nFixups += newfix
@@ -135,10 +135,10 @@ class TT_App:
                         return False
         return True
     # recursive instruction walking loop, for fixing up data types
-    def FixupRecurse(self, pInstruct, pParentArg, ProcName):
+    def FixupRecurse(self, pInstruct, ProcName):
         nFixups = 0
         # call the function to fixup a single instruction
-        newfix = self.FixupInstruction(pInstruct, pParentArg, ProcName)
+        newfix = self.FixupInstruction(pInstruct, ProcName)
         if newfix == None:
             return None
         nFixups += newfix
@@ -146,13 +146,13 @@ class TT_App:
         for arg in pInstruct.Arguments:
             for elem in arg.Elements:
                 if elem.Type == ElemType.FUNC_CALL:
-                    newfix = self.FixupRecurse(elem.pInstruct, arg, ProcName)
+                    newfix = self.FixupRecurse(elem.pInstruct, ProcName)
                     if newfix == None:
                         return None
                     nFixups += newfix
             if arg.ArgType == ParamType.LISTCODE:
                 for instr in arg.Elements[0].pInstruct:
-                    newfix = self.FixupRecurse(instr, None, ProcName)
+                    newfix = self.FixupRecurse(instr, ProcName)
                     if newfix == None:
                         return None
                     nFixups += newfix
@@ -232,7 +232,7 @@ class TT_App:
             return False
         # check that the dest argument is a quoted word
         if Instruct.Arguments[0].ArgType != ParamType.QUOTEDWORD:
-            print "Syntax error: First input to MAKE/LOCALMAKE instructions must be a quoted word in '%s'" % ErrProcName
+            print "Syntax error: First input to MAKE/LOCALMAKE instructions must be a quoted word (the variable's name) in '%s'" % ErrProcName
             return False
         # if the variable already exists, then no problem
         varname = Instruct.Arguments[0].Elements[0].Text[1:]
@@ -244,8 +244,9 @@ class TT_App:
         if not newvar.SetType(vartype):
             print "Syntax error: An object of type '%s' cannot be assigned to variable '%s' in '%s'" % (ParamType.Names[vartype], varname, ErrProcName)
             return False
-        # add a reference to the new Variable to the VarList
+        # add a references to the new Variable to the VarList and the Instruction object
         VarList.append(newvar)
+        Instruct.pMakeVar = newvar
         return True
 
     # Check an instruction for any arguments using values stored in variables
@@ -279,7 +280,7 @@ class TT_App:
         return True
 
     # Basic instruction fix-up function; this gets called iteratively for each instruction in the tree until there are no more fixups
-    def FixupInstruction(self, pInstruct, pParentArg, ProcName):
+    def FixupInstruction(self, pInstruct, ProcName):
         ErrProcName = ProcName or 'global'
         nFixups = 0
         # start by discovering the ArgType for any arguments with an UNKNOWN type
@@ -326,11 +327,21 @@ class TT_App:
                             nFixups += 1
                             continue
                         if proc.InputVariables[i].Type != pInstruct.Arguments[i].ArgType:
-                            print "Logical error: procedure '%s' expects input #%i to be type '%s', but is called with '%s'" % (proc.Name, i+1, ParamType.Names[proc.InputVariables[i].Type], ParamType.Names[pInstruct.Arguments[i].Type])
+                            print "Logical error: procedure '%s' expects input #%i to be type '%s', but is called with '%s'" % (proc.Name, i+1, ParamType.Names[proc.InputVariables[i].Type], ParamType.Names[pInstruct.Arguments[i].ArgType])
                             return None
                     pInstruct.pProc = proc
                     nFixups += 1
                     break
+        # forward ParamTypes through MAKE/LOCALMAKE instructions
+        if pInstruct.BuiltIn is True and pInstruct.pProc is not None and (pInstruct.pProc.FullName == 'make' or pInstruct.pProc.FullName == 'localmake'):
+            argtype = pInstruct.Arguments[1].ArgType
+            if argtype != ParamType.UNKNOWN:
+                if pInstruct.pMakeVar.Type != ParamType.UNKNOWN and pInstruct.pMakeVar.Type != argtype:
+                    print "Logical error: %s instruction setting variable already type '%s' with argument of type '%s'" % (pInstruct.Name, ParamType.Names[pInstruct.MakeVar.Type], ParamType.Names[argtype])
+                    return None
+                if pInstruct.pMakeVar.Type == ParamType.UNKNOWN:
+                    pInstruct.pMakeVar.Type = argtype
+                    nFixups += 1
         # at the end, return the # of fixups that we did
         return nFixups
 

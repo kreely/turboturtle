@@ -262,6 +262,7 @@ class Instruction:
         self.Name = Name
         self.BuiltIn = BuiltIn
         self.pProc = None
+        self.pMakeVar = None
         self.nParams = nParams
         self.bExtraArgs = bExtraArgs
         self.Arguments = [ ]
