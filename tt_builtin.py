@@ -7,21 +7,21 @@
 from tt_types import *
 
 class ProcParams:
-    def __init__(self, name, abbrev, returntype, parm1type, parm2type, parm3type, parenform, extranums):
+    def __init__(self, name, abbrev, returntype, parm1type, parm2type, parm3type, parenform, extraargs):
         self.FullName = name
         self.AbbrevName = abbrev
         self.ReturnType = returntype
         self.ParamTypes = (parm1type, parm2type, parm3type)
         self.bParenthesized = parenform
-        self.bExtraNumbers = extranums
+        self.bExtraArgs = extraargs
         self.nParams = len([parm for parm in self.ParamTypes if parm is not None])
 
 class Builtin:
     # static data members
     _procs = []
 
-    def AddBuiltin(cls, name, abbrev, returntype, parm1type, parm2type, parm3type, parenform, extranums):
-        newproc = ProcParams(name, abbrev, returntype, parm1type, parm2type, parm3type, parenform, extranums)
+    def AddBuiltin(cls, name, abbrev, returntype, parm1type, parm2type, parm3type, parenform, extraargs):
+        newproc = ProcParams(name, abbrev, returntype, parm1type, parm2type, parm3type, parenform, extraargs)
         cls._procs.append(newproc)
     AddBuiltin = classmethod(AddBuiltin)
 

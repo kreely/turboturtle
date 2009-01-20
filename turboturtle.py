@@ -76,6 +76,34 @@ class TT_App:
             for instruct in proc.Instructions:
                 if not TT_App.RecurseInstruction(TT_App.CheckVariables, instruct, proc.Name, self.GlobalVariables, proc.LocalVariables):
                     return
+        # check all the user-defined Procedures to find those which return no value, and set their return type to NOTHING
+        for proc in self.Procedures:
+            bReturnsValue = False
+            for instruct in proc.Instructions:
+                if not TT_App.RecurseInstruction(TT_App.NoOutputInstruction, instruct):
+                    bReturnsValue = True
+                    break
+            if not bReturnsValue:
+                proc.ReturnType = ParamType.NOTHING
+        # now, the main "fix-up" loop where we iteratively discover the types of all variables, procedure arguments, etc
+        while True:
+            # loop until we don't fix up anything else
+            nFixups = 0
+            for instruct in self.MainInstructions:
+                newfix = self.FixupRecurse(instruct, None, None)
+                if newfix == None:
+                    return
+                nFixups += newfix
+            for proc in self.Procedures:
+                for instruct in proc.Instructions:
+                    newfix = self.FixupRecurse(instruct, None, proc.Name)
+                    if newfix == None:
+                        return
+                    nFixups += newfix
+            if nFixups == 0:
+                break
+        # then verify that all data types and object pointers are filled in
+            
 
         # fixme debug
         print "Main Code: %s\nMain Instructions:" % self.MainCode
@@ -106,6 +134,29 @@ class TT_App:
                     if not TT_App.RecurseInstruction(pFunction, instr, *extraargs):
                         return False
         return True
+    # recursive instruction walking loop, for fixing up data types
+    def FixupRecurse(self, pInstruct, pParentArg, ProcName):
+        nFixups = 0
+        # call the function to fixup a single instruction
+        newfix = self.FixupInstruction(pInstruct, pParentArg, ProcName)
+        if newfix == None:
+            return None
+        nFixups += newfix
+        # recurse through other instructions
+        for arg in pInstruct.Arguments:
+            for elem in arg.Elements:
+                if elem.Type == ElemType.FUNC_CALL:
+                    newfix = self.FixupRecurse(elem.pInstruct, arg, ProcName)
+                    if newfix == None:
+                        return None
+                    nFixups += newfix
+            if arg.ArgType == ParamType.LISTCODE:
+                for instr in arg.Elements[0].pInstruct:
+                    newfix = self.FixupRecurse(instr, None, ProcName)
+                    if newfix == None:
+                        return None
+                    nFixups += newfix
+        return nFixups
 
     # debug function
     def InstructPrint(self, instruct, indent):
@@ -141,7 +192,6 @@ class TT_App:
             Instructions.append(instruction)
         # for instr in Instructions:
         return Instructions
-
     @staticmethod
     def ParseInstructionsInArgs(Instruct, ProcName, Procedures):
         for arg in Instruct.Arguments:
@@ -221,6 +271,68 @@ class TT_App:
                     return False
         return True
 
+    # this is used to find any OUTPUT instructions in a procedure, which means that the procedure returns a value
+    @staticmethod
+    def NoOutputInstruction(Instruct):
+        if Instruct.BuiltIn is True and Instruct.Name == 'output':
+            return False
+        return True
+
+    # Basic instruction fix-up function; this gets called iteratively for each instruction in the tree until there are no more fixups
+    def FixupInstruction(self, pInstruct, pParentArg, ProcName):
+        ErrProcName = ProcName or 'global'
+        nFixups = 0
+        # start by discovering the ArgType for any arguments with an UNKNOWN type
+        for arg in pInstruct.Arguments:
+            if arg.ArgType == ParamType.UNKNOWN:
+                # we must pass a copy of the list to the GetExpressionType function, because this list will be destroyed
+                argtype = Argument.GetExpressionType(arg.Elements[:])
+                if argtype is None:
+                    return None
+                if argtype == ParamType.NOTHING:
+                    print "Logical error in procedure '%s': Procedure returning type NOTHING is not allowed in an expression" % ErrProcName
+                    return None
+                if argtype != ParamType.UNKNOWN:
+                    arg.ArgType = argtype
+                    nFixups += 1
+        # next, try to discover exactly which procedure is being called by this instruction
+        if pInstruct.pProc is None and len([arg for arg in pInstruct.Arguments if arg.ArgType == ParamType.UNKNOWN]) == 0:
+            # look for built-in procedures
+            if pInstruct.BuiltIn == True:
+                for proc in Builtin._procs:
+                    if pInstruct.Name.lower() != proc.FullName and pInstruct.Name.lower() != proc.AbbrevName:
+                        continue
+                    if not (pInstruct.nParams == proc.nParams or (pInstruct.bExtraArgs and proc.bExtraArgs and pInstruct.nParams > proc.nParams)):
+                        continue
+                    argsmatch = True
+                    for i in range(proc.nParams):
+                        if proc.ParamTypes[i] != ParamType.ANYTHING and pInstruct.Arguments[i].ArgType != proc.ParamTypes[i]:
+                            argsmatch = False
+                    if not argsmatch:
+                        continue
+                    # we found a match!
+                    pInstruct.pProc = proc
+                    nFixups += 1
+                    break
+            # then look at the user-defined procedures
+            else:
+                for proc in self.Procedures:
+                    if pInstruct.Name.lower() != proc.Name.lower():
+                        continue
+                    # we found a match: forward param types from instructions to procedure inputs, and check existing types
+                    for i in range(pInstruct.nParams):
+                        if proc.InputVariables[i].Type == ParamType.UNKNOWN:
+                            proc.InputVariables[i].Type = pInstruct.Arguments[i].ArgType
+                            nFixups += 1
+                            continue
+                        if proc.InputVariables[i].Type != pInstruct.Arguments[i].ArgType:
+                            print "Logical error: procedure '%s' expects input #%i to be type '%s', but is called with '%s'" % (proc.Name, i+1, ParamType.Names[proc.InputVariables[i].Type], ParamType.Names[pInstruct.Arguments[i].Type])
+                            return None
+                    pInstruct.pProc = proc
+                    nFixups += 1
+                    break
+        # at the end, return the # of fixups that we did
+        return nFixups
 
 # this function is executed when this script is run (not imported)
 if __name__ == '__main__':

@@ -79,7 +79,7 @@ class Argument:
                                     break
                             InstrElements.append(elem)
                         # now, create the special instruction and check that all elements were used
-                        Instruct = Instruction(name, True, procs[0].nParams, procs[0].bExtraNumbers)
+                        Instruct = Instruction(name, True, procs[0].nParams, procs[0].bExtraArgs)
                         if not Instruct.GetArguments(InstrElements, ProcName, Procedures):
                             return False
                         if len(InstrElements) > 0:
@@ -147,10 +147,121 @@ class Argument:
             return False
         return True
 
+    # this is a function which retrieves a ParamType for a list of elements (an expression)
+    # this function should only be called starting from an Elements list of an Argument of type ParamType.UNKNOWN
+    # Arguments with types LISTCODE, LISTNUM, and QUOTEDWORD should have been parsed earlier, so we don't worry about them
+    # Note: this function destroys the list which is passed in
+    @staticmethod
+    def GetExpressionType(ElemList):
+        # sanity check
+        if len(ElemList) == 0:
+            print "Internal error: empty list in GetExpressionType call"
+            return ParamType.NOTHING
+        # first, if any FUNC_CALL or VAL_TYPE elements are typed UNKNOWN, then we can't get the value of this expression
+        for elem in ElemList:
+            if elem.Type == ElemType.VAR_VALUE and (elem.pVariable is None or elem.pVariable.Type == ParamType.UNKNOWN):
+                return ParamType.UNKNOWN
+            elif elem.Type == ElemType.FUNC_CALL and (elem.pInstruct.pProc is None or elem.pInstruct.pProc.ReturnType == ParamType.UNKNOWN):
+                return ParamType.UNKNOWN
+        # otherwise, assume it's an expression and parse the elements in order
+        bNumericExpression = False
+        while (len(ElemList) > 0):
+            # at the start of this loop, we're looking for a value (NUMBER, BOOLEAN, OPEN_PAREN, VAR_VALUE, or FUNC_CALL)
+            elem = ElemList.pop(0)
+            valtype = ParamType.UNKNOWN
+            bNegValue = False
+            # first, check for negative sign
+            if elem.Type == ElemType.INFIX_NUM and elem.Text == '-' and len(ElemList) > 0 and (valtype == ParamType.UNKNOWN or valtype == ParamType.NUMBER):
+                bNegValue = True
+                elem = ElemList.pop(0)
+            # look for a value
+            if elem.Type == ElemType.OPEN_PAREN:
+                # retrieve the value for this parenthesized sub-expression
+                depth = 1
+                subelemlist = []
+                while (depth > 0):
+                    elem = ElemList.pop(0)
+                    if elem.Type == ElemType.OPEN_PAREN:
+                        depth += 1
+                    elif elem.Type == ElemType.CLOSE_PAREN:
+                        depth -= 1
+                    if depth > 0:
+                        subelemlist.append(elem)
+                valtype = Argument.GetExpressionType(subelemlist)
+                if valtype is None:
+                    return None
+            elif elem.Type == ElemType.NUMBER:
+                valtype = ParamType.NUMBER
+            elif elem.Type == ElemType.BOOLEAN:
+                valtype = ParamType.BOOLEAN
+            elif elem.Type == ElemType.VAR_VALUE:
+                valtype = elem.pVariable.Type
+            elif elem.Type == ElemType.FUNC_CALL:
+                valtype = elem.pInstruct.pProc.ReturnType
+            else:
+                print "Syntax error: unexpected element '%s' type %i in expression" % (elem.Text, elem.Type)
+                return None
+            # check for a syntax error with negating a non-numeric value
+            if bNegValue and valtype != ParamType.NUMBER:
+                print "Syntax error: negative sign cannot be used on value of type '%s' in expression" % ParamType.Names[valtype]
+                return None
+            # check for syntax errors with non-numeric and/or non-boolean values inside of an expression
+            if bNumericExpression is True and valtype != ParamType.NUMBER:
+                print "Syntax error: non-numeric value (type '%s') inside a numeric expression" % ParamType.Names[valtype]
+                return None
+            if valtype != ParamType.NUMBER and valtype != ParamType.BOOLEAN and len(ElemList) > 0:
+                clausetext = " ".join([elem.Text for elem in ElemList])
+                print "Syntax error: extraneous clause '%s' following non-numeric and non-boolean value (type '%s') in expression" % (clausetext, ParamType.Names[valtype])
+                return None
+            # otherwise, if value type is non-numeric and non-boolean then it's a singleton and it's okay, so return the type
+            if valtype != ParamType.NUMBER and valtype != ParamType.BOOLEAN:
+                return valtype
+            # also, if there are no more elements, then the expression is okay and the type is in valtype
+            if len(ElemList) == 0:
+                return valtype
+            # now, there are remaining elements in the list and the expression is either a boolean or a numeric one
+            infixelem = ElemList.pop(0)
+            if infixelem.Type == ElemType.INFIX_BOOL:
+                # boolean is a special case: the remainder of the expression must evaluate to the same type as the valtype
+                if bNumericExpression is True:
+                    print "Syntax error: invalid boolean operator '%s' following a numeric value in an expression" % infixelem.Text
+                    return None
+                if len(ElemList) == 0:
+                    print "Syntax error: hanging boolean operator '%s' in expression" % infixelem.Text
+                    return None
+                rtype = Argument.GetExpressionType(ElemList)
+                if rtype is None:
+                    return None
+                if rtype != valtype:  # either bool/bool or num/num comparisons are allowed
+                    print "Syntax error: values of type %s and %s being compared to each other" % (ParamType.Names[valtype], ParamType.Names[rtype])
+                    return None
+                if rtype == ParamType.BOOLEAN and infixelem.Text != '=' and infixelem.Text != '<>':
+                    print "Syntax error: invalid operator '%s' used on boolean values" % infixelem.Text
+                    return None
+                # it's a good boolean expression
+                return ParamType.BOOLEAN
+            elif infixelem.Type == ElemType.INFIX_NUM:
+                if valtype == ParamType.BOOLEAN:
+                    print "Syntax error: invalid numeric operator '%s' following a boolean value in an expression" % infixelem.Text
+                    return None
+                if len(ElemList) == 0:
+                    print "Syntax error: hanging numeric operator '%s' in expression" % infixelem.Text
+                    return None
+                # fall through to get another value in the numeric expression
+                bNumericExpression = True
+            else:
+                print "Syntax error: invalid element '%s' type '%s' following a %s value in an expression" % (infixelem.Text, ElemType.Names[infixelem.Type], ParamType.Names[valtype])
+                return None
+            # go pull out the next value, only a numeric expression can reach here
+        # if we fall out of the loop above, it's an error (probably an internal error because previous checks should prevent this)
+        print "Internal error: extraneous operators or missing values in %s expression" % {False:"boolean",True:"numeric"}[bNumericExpression]
+        return None
+
 class Instruction:
     def __init__(self, Name, BuiltIn, nParams, bExtraArgs):
         self.Name = Name
         self.BuiltIn = BuiltIn
+        self.pProc = None
         self.nParams = nParams
         self.bExtraArgs = bExtraArgs
         self.Arguments = [ ]

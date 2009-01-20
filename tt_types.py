@@ -21,6 +21,20 @@ class ElemType:
     FUNC_CALL = 11  # that's right, a function call and an unquoted word are the same
     CODE_LIST = 12
 
+    Names = { UNKNOWN       : "Unknown",
+              OPEN_PAREN    : "Open Parenthesis",
+              CLOSE_PAREN   : "Close Parenthesis",
+              OPEN_BRACKET  : "Open Bracket",
+              CLOSE_BRACKET : "Close Bracket",
+              NUMBER        : "Number",
+              BOOLEAN       : "Boolean",
+              INFIX_NUM     : "Numeric operator",
+              INFIX_BOOL    : "Comparison operator",
+              QUOTED_WORD   : "Quoted word",
+              VAR_VALUE     : "Variable reference",
+              FUNC_CALL     : "Function call",
+              CODE_LIST     : "Code list" }
+
 class ParamType:
     # procedure input/output parameter types
     UNKNOWN = 0
