@@ -309,6 +309,8 @@ class TT_App:
                 for proc in Builtin._procs:
                     if pInstruct.Name.lower() != proc.FullName and pInstruct.Name.lower() != proc.AbbrevName:
                         continue
+                    if pInstruct.bParenthesized != proc.bParenthesized:
+                        continue
                     if not (pInstruct.nParams == proc.nParams or (pInstruct.bExtraArgs and proc.bExtraArgs and pInstruct.nParams > proc.nParams)):
                         continue
                     argsmatch = True

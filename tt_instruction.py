@@ -79,7 +79,7 @@ class Argument:
                                     break
                             InstrElements.append(elem)
                         # now, create the special instruction and check that all elements were used
-                        Instruct = Instruction(name, True, procs[0].nParams, procs[0].bExtraArgs)
+                        Instruct = Instruction(name, True, procs[0].nParams, True, procs[0].bExtraArgs)
                         if not Instruct.GetArguments(InstrElements, ProcName, Procedures):
                             return False
                         if len(InstrElements) > 0:
@@ -258,12 +258,13 @@ class Argument:
         return None
 
 class Instruction:
-    def __init__(self, Name, BuiltIn, nParams, bExtraArgs):
+    def __init__(self, Name, BuiltIn, nParams, bParenthesized, bExtraArgs):
         self.Name = Name
         self.BuiltIn = BuiltIn
         self.pProc = None
         self.pMakeVar = None
         self.nParams = nParams
+        self.bParenthesized = bParenthesized
         self.bExtraArgs = bExtraArgs
         self.Arguments = [ ]
 

@@ -202,13 +202,13 @@ class Parser:
         # Search for a procedure with this name
         builtinlist = [ proc for proc in Builtin._procs if proc.FullName == InstructName.lower() or proc.AbbrevName == InstructName.lower() ]
         if len(builtinlist) > 0:
-            Instruct = Instruction(InstructName, True, builtinlist[0].nParams, False)
+            Instruct = Instruction(InstructName, True, builtinlist[0].nParams, False, False)
             if not Instruct.GetArguments(CodeElements, ProcName, Procedures):
                 return None
         else:
             proclist = [ proc for proc in Procedures if proc.Name.lower() == InstructName.lower() ]
             if len(proclist) > 0:
-                Instruct = Instruction(InstructName, False, len(proclist[0].InputVariables), False)
+                Instruct = Instruction(InstructName, False, len(proclist[0].InputVariables), False, False)
                 if not Instruct.GetArguments(CodeElements, ProcName, Procedures):
                     return None
             else:
