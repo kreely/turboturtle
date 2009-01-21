@@ -92,8 +92,37 @@ class TT_App:
                     nFixups += newfix
             if nFixups == 0:
                 break
-        # then verify that all data types and object pointers are filled in
-            
+        # look for unused procedures and remove them
+        pUnusedProcs = self.Procedures[:]  # make a copy of the list so we dont trash self.Procedures
+        if not self.RecurseAllInstructions(self.RemoveCalledProcedures, pUnusedProcs):
+            return
+        for proc in pUnusedProcs:
+            self.Procedures.remove(proc)
+        # look for unused global variables and remove them as well (they may have been used only in a deleted procedure)
+        pUnusedGlobals = self.GlobalVariables[:]  # make a copy of the list so we don't trash self.GlobalVariables
+        if not self.RecurseAllInstructions(self.RemoveUsedGlobals, pUnusedGlobals):
+            return
+        for var in pUnusedGlobals:
+            self.GlobalVariables.remove(var)
+        # verify that the ParamTypes of all global and local variables are defined
+        for var in self.GlobalVariables:
+            if var.Type == ParamType.UNKNOWN:
+                print "Logical error: Type of global variable named '%s' cannot be determined." % var.Name
+                return
+        for proc in self.Procedures:
+            for var in proc.LocalVariables:
+                if var.Type == ParamType.UNKNOWN:
+                    print "Logical error: Type of local variable named '%s' in procedure '%s' cannot be determined." % (var.Name, proc.Name)
+                    return
+        # verify that Return value for each Procedure is defined
+        for proc in self.Procedures:
+            if proc.ReturnType == ParamType.UNKNOWN:
+                print "Logical error: Type of return value from procedure '%s' cannot be determined." % proc.Name
+                return
+        # verify that the Procedure pointers and ParamType of all Arguments in each instruction are defined
+        if not self.RecurseAllInstructions(self.FinalInstructionCheck):
+            return
+        # at this point, the "front end" of the compiler is done and only the back-end work remains
 
         # fixme debug
         print "Main Code: %s\nMain Instructions:" % self.MainCode
@@ -369,6 +398,37 @@ class TT_App:
                     return None
         # at the end, return the # of fixups that we did
         return nFixups
+
+    # Examine an instruction, and if it calls a procedure in the Unused list, remove that procedure from the Unused list
+    # Note: procedures calling themselves don't count
+    def RemoveCalledProcedures(self, pInstruct, pCodeProc, pUnusedProcs):
+        if pInstruct.pProc is not None and pInstruct.pProc in pUnusedProcs and pInstruct.pProc != pCodeProc:
+            pUnusedProcs.remove(pInstruct.pProc)
+        return True
+
+    # Examine an instruction, and if it makes or uses a global variable in the Unused list, remove that variable from the list
+    def RemoveUsedGlobals(self, pInstruct, pCodeProc, pUnusedGlobals):
+        # first, check the Instruction's pMakeVar to see if this global is written
+        if pInstruct.pMakeVar is not None and pInstruct.pMakeVar in pUnusedGlobals:
+            pUnusedGlobals.remove(pInstruct.pMakeVar)
+        # then check all the argument elements for a reference to this variable
+        for arg in pInstruct.Arguments:
+            for elem in arg.Elements:
+                if elem.Type == ElemType.VAR_VALUE and elem.pVariable is not None and elem.pVariable in pUnusedGlobals:
+                    pUnusedGlobals.remove(elem.pVariable)
+        return True
+
+    # verify that the Procedure pointer and ParamType of all Arguments in an instruction are defined
+    def FinalInstructionCheck(self, pInstruct, pCodeProc):
+        if pInstruct.pProc is None:
+            print "Logical error: couldn't find matching procedure '%s'.  Probably the given argument Types (%s) don't match the Procedure input Types." % (pInstruct.Name, ",".join([ParamType.Names[arg.ArgType] for arg in pInstruct.Arguments]))
+            return False
+        for i in range(len(pInstruct.Arguments)):
+            if pInstruct.Arguments[i].ArgType == ParamType.UNKNOWN:
+                # this should never happen, because the fixup loop won't set the pProc pointer if there are any UNKNOWN argument types
+                print "Internal error: couldn't determine Type for argument #%i in '%s' procedure call" % (i+1, pInstruct.Name)
+                return False
+        return True
 
 # this function is executed when this script is run (not imported)
 if __name__ == '__main__':
