@@ -52,35 +52,25 @@ class TT_App:
         if self.MainCode == None or self.Procedures == None:
             return
         # the next step is to parse instructions for the main code and the subroutines
-        self.MainInstructions = TT_App.ParseInstructions(self.MainCode, None, self.Procedures)
+        self.MainInstructions = self.ParseInstructions(self.MainCode, None)
         if self.MainInstructions is None:
             return
         for proc in self.Procedures:
-            proc.Instructions = TT_App.ParseInstructions(proc.CodeText, proc.Name, self.Procedures)
+            proc.Instructions = self.ParseInstructions(proc.CodeText, proc)
             if proc.Instructions is None:
                 return
         # create local/global variables from MAKE instructions
         self.GlobalVariables = []
-        for instruct in self.MainInstructions:
-            if not TT_App.RecurseInstruction(TT_App.CreateVarFromInstruct, instruct, None, self.GlobalVariables, None):
-                return
-        for proc in self.Procedures:
-            for instruct in proc.Instructions:
-                if not TT_App.RecurseInstruction(TT_App.CreateVarFromInstruct, instruct, proc.Name, self.GlobalVariables, proc.LocalVariables):
-                    return
+        if not self.RecurseAllInstructions(self.CreateVarFromInstruct):
+            return
         # check for instruction arguments using un-defined variables
-        for instruct in self.MainInstructions:
-            if not TT_App.RecurseInstruction(TT_App.CheckVariables, instruct, None, self.GlobalVariables, None):
-                return
-        for proc in self.Procedures:
-            for instruct in proc.Instructions:
-                if not TT_App.RecurseInstruction(TT_App.CheckVariables, instruct, proc.Name, self.GlobalVariables, proc.LocalVariables):
-                    return
+        if not self.RecurseAllInstructions(self.CheckVariables):
+            return
         # check all the user-defined Procedures to find those which return no value, and set their return type to NOTHING
         for proc in self.Procedures:
             bReturnsValue = False
             for instruct in proc.Instructions:
-                if not TT_App.RecurseInstruction(TT_App.NoOutputInstruction, instruct):
+                if not self.RecurseInstruction(self.NoOutputInstruction, instruct, proc):
                     bReturnsValue = True
                     break
             if not bReturnsValue:
@@ -117,21 +107,30 @@ class TT_App:
             for instruct in proc.Instructions:
                 self.InstructPrint(instruct, 0)
 
+    # call a function for all instructions in the world: both in the main function and in all the procedures
+    def RecurseAllInstructions(self, pFunction, *extraargs):
+        for instruct in self.MainInstructions:
+            if not self.RecurseInstruction(pFunction, instruct, None, *extraargs):
+                return False
+        for proc in self.Procedures:
+            for instruct in proc.Instructions:
+                if not self.RecurseInstruction(pFunction, instruct, proc, *extraargs):
+                    return False
+        return True
     # instruction recursion loop, accepting a function to call for each instruction
-    @staticmethod
-    def RecurseInstruction(pFunction, instruct, *extraargs):
+    def RecurseInstruction(self, pFunction, instruct, pCodeProc, *extraargs):
         # call the given function
-        if not pFunction(instruct, *extraargs):
+        if not pFunction(instruct, pCodeProc, *extraargs):
             return False
         # recurse through other instructions
         for arg in instruct.Arguments:
             for elem in arg.Elements:
                 if elem.Type == ElemType.FUNC_CALL:
-                    if not TT_App.RecurseInstruction(pFunction, elem.pInstruct, *extraargs):
+                    if not self.RecurseInstruction(pFunction, elem.pInstruct, pCodeProc, *extraargs):
                         return False
             if arg.ArgType == ParamType.LISTCODE:
                 for instr in arg.Elements[0].pInstruct:
-                    if not TT_App.RecurseInstruction(pFunction, instr, *extraargs):
+                    if not self.RecurseInstruction(pFunction, instr, pCodeProc, *extraargs):
                         return False
         return True
     # recursive instruction walking loop, for fixing up data types
@@ -174,8 +173,11 @@ class TT_App:
                     self.InstructPrint(instr, indent + 4)
 
     # functions for parsing Instruction objects out of code text
-    @staticmethod
-    def ParseInstructions(CodeText, ProcName, Procedures):
+    def ParseInstructions(self, CodeText, pCodeProc):
+        if pCodeProc is None:
+            ProcName = None
+        else:
+            ProcName = pCodeProc.Name
         # parse the instruction stream into a list of elements
         Elements = Parser.ParseStreamElements(CodeText, ProcName)
         if Elements is None:
@@ -183,17 +185,20 @@ class TT_App:
         # pull instructions out of the element list
         Instructions = []
         while len(Elements) > 0:
-            instruction = Parser.GetSingleInstruction(Elements, ProcName, Procedures)
+            instruction = Parser.GetSingleInstruction(Elements, ProcName, self.Procedures)
             if instruction is None:
                 return None
             # parse the Instruction lists in procedure arguments
-            if not TT_App.RecurseInstruction(TT_App.ParseInstructionsInArgs, instruction, ProcName, Procedures):
+            if not self.RecurseInstruction(self.ParseInstructionsInArgs, instruction, pCodeProc):
                 return None
             Instructions.append(instruction)
         # for instr in Instructions:
         return Instructions
-    @staticmethod
-    def ParseInstructionsInArgs(Instruct, ProcName, Procedures):
+    def ParseInstructionsInArgs(self, Instruct, pCodeProc):
+        if pCodeProc is None:
+            ProcName = None
+        else:
+            ProcName = pCodeProc.Name
         for arg in Instruct.Arguments:
             if arg.ArgType == ParamType.LISTCODE:
                 # convert the list (without brackets) back to text, and re-read the elements as a new instructions
@@ -202,7 +207,7 @@ class TT_App:
                 # pull instructions out of the element list
                 instr_codelist = []
                 while len(codelistelems) > 0:
-                    instruction = Parser.GetSingleInstruction(codelistelems, ProcName, Procedures)
+                    instruction = Parser.GetSingleInstruction(codelistelems, ProcName, self.Procedures)
                     if instruction is None:
                         return False
                     instr_codelist.append(instruction)
@@ -211,24 +216,25 @@ class TT_App:
         return True
 
     # functions to allocate a global or local variable from a MAKE or LOCALMAKE procedure call
-    @staticmethod
-    def CreateVarFromInstruct(Instruct, ProcName, GlobalVariables, LocalVariables):
+    def CreateVarFromInstruct(self, Instruct, pCodeProc):
         if Instruct.Name.lower() == 'make':
-            if not TT_App.CreateVar(Instruct, ProcName, GlobalVariables):
+            if not self.CreateVar(Instruct, pCodeProc, self.GlobalVariables):
                 return False
         elif Instruct.Name.lower() == 'localmake':
-            if ProcName is None or LocalVariables is None:
+            if pCodeProc is None:
                 print "Syntax error: LOCALMAKE used outside of procedure definition"
                 return False
-            if not TT_App.CreateVar(Instruct, ProcName, LocalVariables):
+            if not self.CreateVar(Instruct, pCodeProc, pCodeProc.LocalVariables):
                 return False
-        elif Instruct.Name.lower() == 'output' and (ProcName is None or LocalVariables is None):
+        elif Instruct.Name.lower() == 'output' and pCodeProc is None:
             print "Syntax error: OUTPUT used outside of procedure definition"
             return False
         return True
-    @staticmethod
-    def CreateVar(Instruct, ProcName, VarList):
-        ErrProcName = ProcName or 'global'
+    def CreateVar(self, Instruct, pCodeProc, VarList):
+        if pCodeProc is None:
+            ErrProcName = 'global'
+        else:
+            ErrProcName = pCodeProc.Name
         # veryify exactly 2 arguments
         if len(Instruct.Arguments) != 2:
             print "Syntax error: MAKE/LOCALMAKE instructions must have 2 arguments in '%s'" % ErrProcName
@@ -255,19 +261,21 @@ class TT_App:
     # Check an instruction for any arguments using values stored in variables
     # Make sure that the variable names are defined (ie, there is no missing MAKE/LOCALMAKE)
     # Add references to the Variable object into elements with type VAR_VALUE
-    @staticmethod
-    def CheckVariables(Instruct, ProcName, GlobalVariables, LocalVariables):
-        ErrProcName = ProcName or 'global'
+    def CheckVariables(self, Instruct, pCodeProc):
+        if pCodeProc is None:
+            ErrProcName = 'global'
+        else:
+            ErrProcName = pCodeProc.Name
         for arg in Instruct.Arguments:
             for elem in arg.Elements:
                 if elem.Type == ElemType.VAR_VALUE:
                     varname = elem.Text[1:]
-                    if LocalVariables is not None:
-                        localvars = [ var for var in LocalVariables if var.Name.lower() == varname.lower() ]
+                    if pCodeProc is not None:
+                        localvars = [ var for var in pCodeProc.LocalVariables if var.Name.lower() == varname.lower() ]
                         if len(localvars) > 0:
                             elem.pVariable = localvars[0]
                             continue
-                    globalvars = [ var for var in GlobalVariables if var.Name.lower() == varname.lower() ]
+                    globalvars = [ var for var in self.GlobalVariables if var.Name.lower() == varname.lower() ]
                     if len(globalvars) > 0:
                         elem.pVariable = globalvars[0]
                         continue
@@ -276,9 +284,8 @@ class TT_App:
         return True
 
     # this is used to find any OUTPUT instructions in a procedure, which means that the procedure returns a value
-    @staticmethod
-    def NoOutputInstruction(Instruct):
-        if Instruct.BuiltIn is True and Instruct.Name == 'output':
+    def NoOutputInstruction(self, Instruct, pCodeProc):
+        if Instruct.BuiltIn is True and Instruct.Name.lower() == 'output':
             return False
         return True
 
