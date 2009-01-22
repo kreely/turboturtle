@@ -59,7 +59,7 @@ class TT_App:
             proc.Instructions = self.ParseInstructions(proc.CodeText, proc)
             if proc.Instructions is None:
                 return
-        # create local/global variables from MAKE instructions
+        # create local/global variables from MAKE, LOCALMAKE, and FOR instructions
         self.GlobalVariables = []
         if not self.RecurseAllInstructions(self.CreateVarFromInstruct):
             return
@@ -244,9 +244,13 @@ class TT_App:
                 arg.Elements = [ Element(ElemType.CODE_LIST, codelisttext, instr_codelist) ]
         return True
 
-    # functions to allocate a global or local variable from a MAKE or LOCALMAKE procedure call
+    # functions to allocate a global or local variable from a MAKE, LOCALMAKE, or FOR procedure call
+    # this also checks to make sure that an OUTPUT instruction is never called outside of a procedure
     def CreateVarFromInstruct(self, Instruct, pCodeProc):
-        if Instruct.Name.lower() == 'make':
+        if Instruct.Name.lower() == 'for':
+            if not self.CreateForLoopVar(Instruct, pCodeProc):
+                return False
+        elif Instruct.Name.lower() == 'make':
             if not self.CreateVar(Instruct, pCodeProc, self.GlobalVariables):
                 return False
         elif Instruct.Name.lower() == 'localmake':
@@ -275,7 +279,9 @@ class TT_App:
         # if the variable already exists, then no problem
         varname = Instruct.Arguments[0].Elements[0].Text[1:]
         vartype = Instruct.Arguments[1].ArgType
-        if len([var for var in VarList if var.Name.lower() == varname.lower()]) > 0:
+        foundvars = [var for var in VarList if var.Name.lower() == varname.lower()]
+        if len(foundvars) > 0:
+            Instruct.pMakeVar = foundvars[0]
             return True
         # otherwise, create a new variable and copy the type from the argument (which is probably ParamType.UNKNOWN but could be QUOTEDWORD or LISTNUM or LISTCODE)
         newvar = Variable(varname)
@@ -284,6 +290,38 @@ class TT_App:
             return False
         # add a references to the new Variable to the VarList and the Instruction object
         VarList.append(newvar)
+        Instruct.pMakeVar = newvar
+        return True
+    def CreateForLoopVar(self, Instruct, pCodeProc):
+        if pCodeProc is None:
+            ErrProcName = 'global'
+        else:
+            ErrProcName = pCodeProc.Name
+        # check that the dest argument is a quoted word
+        if Instruct.Arguments[0].ArgType != ParamType.QUOTEDWORD:
+            print "Internal error: First input to FOR instruction must be a variable name in '%s'" % ErrProcName
+            return False
+        # set the varlist according to whether or not we are inside of a procedure definition
+        if pCodeProc is None:
+            varlist = self.GlobalVariables
+        else:
+            varlist = pCodeProc.LocalVariables
+        # if the variable already exists, then check type to make sure it's not incompatible and return
+        varname = Instruct.Arguments[0].Elements[0].Text[1:]
+        foundvars = [var for var in varlist if var.Name.lower() == varname.lower()]
+        if len(foundvars) > 0:
+            Instruct.pMakeVar = foundvars[0]
+            if foundvars[0].Type == ParamType.UNKNOWN:
+                foundvars[0].Type = ParamType.NUMBER
+            elif foundvars[0].Type != ParamType.NUMBER:
+                print "Syntax error: Variable '%s' in FOR instruction in procedure '%s' must be a number, but its already type '%s'" % (varname, ErrProcName, ParamType.Names[foundvars[0].Type])
+                return False
+            return True
+        # otherwise, create a new variable
+        newvar = Variable(varname)
+        newvar.SetType(ParamType.NUMBER)
+        # add a references to the new Variable to the VarList and the Instruction object
+        varlist.append(newvar)
         Instruct.pMakeVar = newvar
         return True
 
@@ -345,7 +383,7 @@ class TT_App:
                 for proc in Builtin._procs:
                     if pInstruct.Name.lower() != proc.FullName and pInstruct.Name.lower() != proc.AbbrevName:
                         continue
-                    if pInstruct.bParenthesized != proc.bParenthesized:
+                    if proc.bParenthesized and not pInstruct.bParenthesized:
                         continue
                     if not (pInstruct.nParams == proc.nParams or (pInstruct.bExtraArgs and proc.bExtraArgs and pInstruct.nParams > proc.nParams)):
                         continue
@@ -384,7 +422,7 @@ class TT_App:
                     pInstruct.pMakeVar.Type = argtype
                     nFixups += 1
                 elif pInstruct.pMakeVar.Type != argtype:
-                    print "Logical error: %s instruction setting variable already type '%s' with argument of type '%s'" % (pInstruct.Name, ParamType.Names[pInstruct.MakeVar.Type], ParamType.Names[argtype])
+                    print "Logical error: %s instruction setting variable already type '%s' with argument of type '%s'" % (pInstruct.Name, ParamType.Names[pInstruct.pMakeVar.Type], ParamType.Names[argtype])
                     return None
         # forward ParamType from OUTPUT argument to procedure return type
         if pInstruct.BuiltIn is True and pInstruct.pProc is not None and pInstruct.pProc.FullName == 'output':

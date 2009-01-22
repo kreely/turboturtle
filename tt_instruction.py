@@ -269,6 +269,10 @@ class Instruction:
         self.Arguments = [ ]
 
     def GetArguments(self, CodeElements, ProcName, Procedures):
+        # first, handle special case instructions
+        if self.Name.lower() == "for":
+            return self.HandleSpecial_for(CodeElements, ProcName, Procedures)
+        # then handle normal instructions
         if self.bExtraArgs:
             # we don't know how many arguments will be given, so just take everything available
             self.nParams = 0
@@ -285,6 +289,50 @@ class Instruction:
             if not newarg.ParseFromCodeElements(CodeElements, ProcName, Procedures):
                 return False
             self.Arguments.append(newarg)
+        return True
+
+    def HandleSpecial_for(self, CodeElements, ProcName, Procedures):
+        ErrProcName = ProcName or 'global'
+        # first load the 'forcontrol' list which should come out as a code list
+        if len(CodeElements) == 0:
+            print "Syntax error: missing arguments for 'for' instruction in procedure '%s'" % ErrProcName
+            return False
+        forcontrol = Argument()
+        if not forcontrol.ParseFromCodeElements(CodeElements, ProcName, Procedures):
+            return False
+        if forcontrol.ArgType != ParamType.LISTCODE:
+            print "Syntax error: first argument in 'for' instruction in procedure '%s' is expected to be a 'forcontrol' list" % ErrProcName
+            return False
+        # then load the instruction list
+        if len(CodeElements) == 0:
+            print "Syntax error: missing 2nd argument for 'for' instruction in procedure '%s'" % ErrProcName
+            return False
+        instructlist = Argument()
+        if not instructlist.ParseFromCodeElements(CodeElements, ProcName, Procedures):
+            return False
+        if instructlist.ArgType != ParamType.LISTCODE:
+            print "Syntax error: second argument in 'for' instruction in procedure '%s' is expected to be an instruction list" % ErrProcName
+            return False
+        # convert the forcontrol list (without brackets) back to text and then parse into elements again
+        forlisttext = " ".join([elem.Text for elem in forcontrol.Elements])
+        forlistelems = Parser.ParseStreamElements(forlisttext, ProcName)
+        # check that the first element (for the variable name) is an UNQUOT_WORD, and change it to a QUOTED_WORD
+        if forlistelems[0][0] != ElemType.UNQUOT_WORD:
+            print "Syntax error: first word in 'forcontrol' list in 'for' instruction is expected to be a variable name in procedure '%s'" % ErrProcName
+            return False
+        forlistelems[0] = (ElemType.QUOTED_WORD, '"' + forlistelems[0][1])
+        # re-parse all of the forcontrol list items as arguments, and insert them into the instruction
+        self.nParams = 0
+        self.bParenthesized = False
+        while len(forlistelems) > 0:
+            newarg = Argument()
+            if not newarg.ParseFromCodeElements(forlistelems, ProcName, Procedures):
+                return False
+            self.Arguments.append(newarg)
+            self.nParams += 1
+        # put the instruction list on the end
+        self.Arguments.append(instructlist)
+        self.nParams += 1
         return True
 
 # the imports are at the bottom of this file to get around a python problem caused by
