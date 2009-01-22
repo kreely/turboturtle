@@ -156,8 +156,6 @@ class Parser:
                     elemtype = ElemType.QUOTED_WORD
                 elif elemtext == ':':
                     elemtype = ElemType.VAR_VALUE
-                elif elemtext in '0123456789':
-                    elemtype = ElemType.NUMBER
                 else:
                     elemtype = ElemType.UNQUOT_WORD
             else:
@@ -173,9 +171,13 @@ class Parser:
             while len(CodeText) > 0 and CodeText[0] not in dividers:
                 elemtext = elemtext + CodeText[0]
                 CodeText = CodeText[1:]
-            # check for immediate booleans
-            if elemtype == ElemType.UNQUOT_WORD and bracketDepth == 0 and (elemtext.lower() == "true" or elemtext.lower() == "false"):
-                elemtype = ElemType.BOOLEAN
+            if elemtype == ElemType.UNQUOT_WORD and bracketDepth == 0:
+                # check for numbers
+                if len([ch for ch in elemtext if ch not in '0123456789.']) == 0:
+                    elemtype = ElemType.NUMBER
+                # check for immediate booleans
+                elif elemtext.lower() == "true" or elemtext.lower() == "false":
+                    elemtype = ElemType.BOOLEAN
             # check for invalid elements
             if elemtext == '"':
                 print "Syntax error: emtpy quotation mark in procedure '%s'" % ErrProcName
