@@ -7,21 +7,23 @@
 from tt_types import *
 
 class ProcParams:
-    def __init__(self, name, abbrev, returntype, parm1type, parm2type, parm3type, parenform, extraargs):
+    def __init__(self, name, abbrev, returntype, bParenform, bExtraargs, *ParmTypes):
         self.FullName = name
         self.AbbrevName = abbrev
         self.ReturnType = returntype
-        self.ParamTypes = (parm1type, parm2type, parm3type)
-        self.bParenthesized = parenform
-        self.bExtraArgs = extraargs
-        self.nParams = len([parm for parm in self.ParamTypes if parm is not None])
+        self.ParamTypes = []
+        for parmtype in ParmTypes:
+            self.ParamTypes.append(parmtype)
+        self.bParenthesized = bParenform
+        self.bExtraArgs = bExtraargs
+        self.nParams = len(self.ParamTypes)
 
 class Builtin:
     # static data members
     _procs = []
 
-    def AddBuiltin(cls, name, abbrev, returntype, parm1type, parm2type, parm3type, parenform, extraargs):
-        newproc = ProcParams(name, abbrev, returntype, parm1type, parm2type, parm3type, parenform, extraargs)
+    def AddBuiltin(cls, name, abbrev, returntype, bParenform, bExtraargs, *ParmTypes):
+        newproc = ProcParams(name, abbrev, returntype, bParenform, bExtraargs, *ParmTypes)
         cls._procs.append(newproc)
     AddBuiltin = classmethod(AddBuiltin)
 
@@ -30,32 +32,34 @@ class Builtin:
 
         
 # full built-in procedure table
-Builtin.AddBuiltin("array",        None,    ParamType.ARRAY,   ParamType.NUMBER,     None,               None, False, False)
-Builtin.AddBuiltin("back",         "bk",    ParamType.NOTHING, ParamType.NUMBER,     None,               None, False, False)
-Builtin.AddBuiltin("clean",        None,    ParamType.NOTHING, None,                 None,               None, False, False)
-Builtin.AddBuiltin("clearscreen",  None,    ParamType.NOTHING, None,                 None,               None, False, False)
-Builtin.AddBuiltin("forever",      None,    ParamType.NOTHING, ParamType.LISTCODE,   None,               None, False, False)
-Builtin.AddBuiltin("forward",      "fd",    ParamType.NOTHING, ParamType.NUMBER,     None,               None, False, False)
-Builtin.AddBuiltin("fput",         None,    ParamType.LISTNUM, ParamType.NUMBER,     ParamType.LISTNUM,  None, False, False)
-Builtin.AddBuiltin("left",         "lt",    ParamType.NOTHING, ParamType.NUMBER,     None,               None, False, False)
-Builtin.AddBuiltin("localmake",    None,    ParamType.NOTHING, ParamType.QUOTEDWORD, ParamType.ANYTHING, None, False, False)
-Builtin.AddBuiltin("lput",         None,    ParamType.LISTNUM, ParamType.NUMBER,     ParamType.LISTNUM,  None, False, False)
-Builtin.AddBuiltin("make",         None,    ParamType.NOTHING, ParamType.QUOTEDWORD, ParamType.ANYTHING, None, False, False)
-Builtin.AddBuiltin("mdarray",      None,    ParamType.ARRAY,   ParamType.LISTNUM,    None,               None, False, False)
-Builtin.AddBuiltin("output",       "op",    ParamType.NOTHING, ParamType.ANYTHING,   None,               None, False, False)
-Builtin.AddBuiltin("penup",        "pu",    ParamType.NOTHING, None,                 None,               None, False, False)
-Builtin.AddBuiltin("pendown",      "pd",    ParamType.NOTHING, None,                 None,               None, False, False)
-Builtin.AddBuiltin("penerase",     "pe",    ParamType.NOTHING, None,                 None,               None, False, False)
-Builtin.AddBuiltin("penpaint",     "ppt",   ParamType.NOTHING, None,                 None,               None, False, False)
-Builtin.AddBuiltin("penreverse",   "px",    ParamType.NOTHING, None,                 None,               None, False, False)
-Builtin.AddBuiltin("reverse",      None,    ParamType.LISTNUM, ParamType.LISTNUM,    None,               None, False, False)
-Builtin.AddBuiltin("repcount",     "#",     ParamType.NUMBER,  None,                 None,               None, False, False)
-Builtin.AddBuiltin("repeat",       None,    ParamType.NOTHING, ParamType.NUMBER,     ParamType.LISTCODE, None, False, False)
-Builtin.AddBuiltin("right",        "rt",    ParamType.NOTHING, ParamType.NUMBER,     None,               None, False, False)
-Builtin.AddBuiltin("setbackground","setbg", ParamType.NOTHING, ParamType.NUMBER,     None,               None, False, False)
-Builtin.AddBuiltin("setbackground","setbg", ParamType.NOTHING, ParamType.LISTNUM,    None,               None, False, False)
-Builtin.AddBuiltin("setpencolor",  "setpc", ParamType.NOTHING, ParamType.NUMBER,     None,               None, False, False)
-Builtin.AddBuiltin("setpencolor",  "setpc", ParamType.NOTHING, ParamType.LISTNUM,    None,               None, False, False)
-Builtin.AddBuiltin("setpensize",   None,    ParamType.NOTHING, ParamType.NUMBER,     None,               None, False, False)
+Builtin.AddBuiltin("array",        None,    ParamType.ARRAY,   False, False, ParamType.NUMBER)
+Builtin.AddBuiltin("back",         "bk",    ParamType.NOTHING, False, False, ParamType.NUMBER)
+Builtin.AddBuiltin("clean",        None,    ParamType.NOTHING, False, False)
+Builtin.AddBuiltin("clearscreen",  None,    ParamType.NOTHING, False, False)
+Builtin.AddBuiltin("for",          None,    ParamType.NOTHING, False, False, ParamType.QUOTEDWORD, ParamType.NUMBER, ParamType.NUMBER, ParamType.LISTCODE)
+Builtin.AddBuiltin("for",          None,    ParamType.NOTHING, False, False, ParamType.QUOTEDWORD, ParamType.NUMBER, ParamType.NUMBER, ParamType.NUMBER, ParamType.LISTCODE)
+Builtin.AddBuiltin("forever",      None,    ParamType.NOTHING, False, False, ParamType.LISTCODE)
+Builtin.AddBuiltin("forward",      "fd",    ParamType.NOTHING, False, False, ParamType.NUMBER)
+Builtin.AddBuiltin("fput",         None,    ParamType.LISTNUM, False, False, ParamType.NUMBER,     ParamType.LISTNUM)
+Builtin.AddBuiltin("left",         "lt",    ParamType.NOTHING, False, False, ParamType.NUMBER)
+Builtin.AddBuiltin("localmake",    None,    ParamType.NOTHING, False, False, ParamType.QUOTEDWORD, ParamType.ANYTHING)
+Builtin.AddBuiltin("lput",         None,    ParamType.LISTNUM, False, False, ParamType.NUMBER,     ParamType.LISTNUM)
+Builtin.AddBuiltin("make",         None,    ParamType.NOTHING, False, False, ParamType.QUOTEDWORD, ParamType.ANYTHING)
+Builtin.AddBuiltin("mdarray",      None,    ParamType.ARRAY,   False, False, ParamType.LISTNUM)
+Builtin.AddBuiltin("output",       "op",    ParamType.NOTHING, False, False, ParamType.ANYTHING)
+Builtin.AddBuiltin("penup",        "pu",    ParamType.NOTHING, False, False)
+Builtin.AddBuiltin("pendown",      "pd",    ParamType.NOTHING, False, False)
+Builtin.AddBuiltin("penerase",     "pe",    ParamType.NOTHING, False, False)
+Builtin.AddBuiltin("penpaint",     "ppt",   ParamType.NOTHING, False, False)
+Builtin.AddBuiltin("penreverse",   "px",    ParamType.NOTHING, False, False)
+Builtin.AddBuiltin("reverse",      None,    ParamType.LISTNUM, False, False, ParamType.LISTNUM)
+Builtin.AddBuiltin("repcount",     "#",     ParamType.NUMBER,  False, False)
+Builtin.AddBuiltin("repeat",       None,    ParamType.NOTHING, False, False, ParamType.NUMBER,     ParamType.LISTCODE)
+Builtin.AddBuiltin("right",        "rt",    ParamType.NOTHING, False, False, ParamType.NUMBER)
+Builtin.AddBuiltin("setbackground","setbg", ParamType.NOTHING, False, False, ParamType.NUMBER)
+Builtin.AddBuiltin("setbackground","setbg", ParamType.NOTHING, False, False, ParamType.LISTNUM)
+Builtin.AddBuiltin("setpencolor",  "setpc", ParamType.NOTHING, False, False, ParamType.NUMBER)
+Builtin.AddBuiltin("setpencolor",  "setpc", ParamType.NOTHING, False, False, ParamType.LISTNUM)
+Builtin.AddBuiltin("setpensize",   None,    ParamType.NOTHING, False, False, ParamType.NUMBER)
 
 
