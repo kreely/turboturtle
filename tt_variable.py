@@ -10,6 +10,7 @@ class Variable:
     def __init__(self, Name):
         self.Name = Name
         self.Type = ParamType.UNKNOWN
+        self.CppName = None
 
     def SetType(self, Type):
         allowedtypes = (ParamType.UNKNOWN, ParamType.BOOLEAN, ParamType.NUMBER, ParamType.LISTNUM, ParamType.ARRAY, ParamType.QUOTEDWORD)

@@ -57,3 +57,13 @@ class ParamType:
               ARRAY      : "Array",
               QUOTEDWORD : "Quoted word" }
 
+class Struct(dict):
+    def __getattr__(self,name):
+        try:
+            val = self[name]
+        except KeyError:
+            val = None
+        return val
+    def __setattr__(self,name,val):
+        self[name] = val
+

@@ -16,6 +16,7 @@ class Procedure:
             newvar = Variable(varname)
             self.InputVariables.append(newvar)      # references to the new Variable object are stored in both
             self.LocalVariables.append(newvar)      # InputVariables and LocalVariables lists
+        self.CppName = None
             
     def AddCode(self, SourceCode):
         self.CodeText = SourceCode

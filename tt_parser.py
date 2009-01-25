@@ -147,7 +147,7 @@ class Parser:
                     Elements.append((ElemType.INFIX_NUM, elemtext))
                     continue
                 elif elemtext in '<=>':
-                    if (elemtext == '<' and (CodeText[0] == '=' or CodeText[0] == '>')) or (elemtext == '>' and CodeText[0] == '='):
+                    if (elemtext == '<' and (CodeText[0] in ('=', '>'))) or (elemtext == '>' and CodeText[0] == '='):
                         elemtext = elemtext + CodeText[0]
                         CodeText = CodeText[1:]
                     Elements.append((ElemType.INFIX_BOOL, elemtext))
@@ -198,7 +198,7 @@ class Parser:
         # look for invalid characters
         firstelem = CodeElements.pop(0)
         if firstelem[0] != ElemType.UNQUOT_WORD:
-            print "Syntax error in '%s': Found invalid word '%s' instead of procedure call" % (ErrProcName, firstelem[1])
+            print "Syntax error in '%s': Found invalid word '%s' instead of an Instruction" % (ErrProcName, firstelem[1])
             return None
         InstructName = firstelem[1]
         # Search for a procedure with this name

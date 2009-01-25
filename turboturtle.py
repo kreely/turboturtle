@@ -7,10 +7,11 @@
 
 import os, sys
 from tt_types import *
-from tt_variable import *
-from tt_procedure import *
 from tt_parser import *
 from tt_builtin import *
+from tt_variable import *
+from tt_procedure import *
+from tt_cppwriter import *
 from tt_instruction import *
 
 def main():
@@ -123,6 +124,72 @@ class TT_App:
         if not self.RecurseAllInstructions(self.FinalInstructionCheck):
             return
         # at this point, the "front end" of the compiler is done and only the back-end work remains
+        writer = CppWriter()
+        # start by creating C++-friendly names for all of the procedures and variables
+        for var in self.GlobalVariables:
+            var.CppName = "g_%s" % CppWriter.GetValidCppName(var.Name)
+        for proc in self.Procedures:
+            proc.CppName = "_%s" % CppWriter.GetValidCppName(proc.Name)
+            for var in proc.LocalVariables:
+                var.CppName = "l_%s" % CppWriter.GetValidCppName(var.Name)
+        # Initialize to default the state variables which have an impact on the resulting C++ code
+        writer.InitDefaultState()
+        # Then go through every instruction in the program and modify these state variables according to the Logo code
+        if not self.RecurseAllInstructions(writer.SetStateFromInstruction):
+            return
+        # Now start the output of C++ code by writing global variable definitions
+        GlobalInitCode = writer.WriteGlobals(self.GlobalVariables)
+        if GlobalInitCode is None:
+            return
+        # Next, write the function definitions for the user-defined Logo procedures
+        for proc in self.Procedures:
+            writer.OutputText += "static "
+            if not writer.WriteFunctionPrototype(proc):
+                return
+            writer.OutputText += ";\n"
+        if len(self.Procedures) > 0:
+            writer.OutputText += "\n"
+        # write out the main function
+        writer.OutputText += "void tt_LogoMain(void)\n{\n"
+        if GlobalInitCode != "":
+            writer.OutputText += " " * IndentSize + "// initialize global variables\n"
+            writer.OutputText += GlobalInitCode + "\n"
+        writer.InitProcedure()
+        for instruct in self.MainInstructions:
+            if not writer.WriteInstruction(instruct, 1, True):
+                return
+        writer.OutputText += "}\n\n"
+        # write out all the procedures
+        for proc in self.Procedures:
+            # start with the function definition and opening brace
+            if not writer.WriteFunctionPrototype(proc):
+                return
+            writer.OutputText += "\n{\n"
+            # then definitions and initialization of local variables
+            LocalInitCode = ""
+            LocalVars = 0
+            for var in proc.LocalVariables:
+                if var in proc.InputVariables:
+                    continue
+                LocalVars += 1
+                Code = writer.WriteVariableDefinition(var, 1)
+                if Code is None:
+                    return None
+                LocalInitCode += Code
+            if LocalVars > 0:
+                writer.OutputText += "\n"
+            if LocalInitCode != "":
+                writer.OutputText += LocalInitCode + "\n"
+            # lastly, write out all the instructions
+            writer.InitProcedure()
+            for instruct in proc.Instructions:
+                if not writer.WriteInstruction(instruct, 1, True):
+                    return
+            writer.OutputText += "}\n\n"
+        # Compilation done!  Save the output text into the destination file
+        f = open(self.OutputName, 'w')
+        f.write(writer.OutputText)
+        f.close()
 
         # fixme debug
         print "Main Code: %s\nMain Instructions:" % self.MainCode
@@ -220,6 +287,13 @@ class TT_App:
             # parse the Instruction lists in procedure arguments
             if not self.RecurseInstruction(self.ParseInstructionsInArgs, instruction, pCodeProc):
                 return None
+            # syntax error if a built-in instruction (outside of an expression) does not return NOTHING
+            if instruction.bBuiltIn is True:
+                InstructName = instruction.Name.lower()
+                proclist = [ proc for proc in Builtin._procs if proc.FullName == InstructName or proc.AbbrevName == InstructName ]
+                if proclist[0].ReturnType != ParamType.NOTHING:
+                    print "Syntax error: return value of '%s' instruction is unused" % InstructName
+                    return None
             Instructions.append(instruction)
         # for instr in Instructions:
         return Instructions
@@ -239,6 +313,13 @@ class TT_App:
                     instruction = Parser.GetSingleInstruction(codelistelems, ProcName, self.Procedures)
                     if instruction is None:
                         return False
+                    # syntax error if a built-in instruction (outside of an expression) does not return NOTHING
+                    if instruction.bBuiltIn is True:
+                        InstructName = instruction.Name.lower()
+                        proclist = [ proc for proc in Builtin._procs if proc.FullName == InstructName or proc.AbbrevName == InstructName ]
+                        if proclist[0].ReturnType != ParamType.NOTHING:
+                            print "Syntax error: return value of '%s' instruction is unused" % InstructName
+                            return False
                     instr_codelist.append(instruction)
                 # store this list of instructions in this argument.  this removes the original element lists
                 arg.Elements = [ Element(ElemType.CODE_LIST, codelisttext, instr_codelist) ]
@@ -352,7 +433,7 @@ class TT_App:
 
     # this is used to find any OUTPUT instructions in a procedure, which means that the procedure returns a value
     def NoOutputInstruction(self, Instruct, pCodeProc):
-        if Instruct.BuiltIn is True and Instruct.Name.lower() == 'output':
+        if Instruct.bBuiltIn is True and Instruct.Name.lower() == 'output':
             return False
         return True
 
@@ -379,7 +460,7 @@ class TT_App:
         # next, try to discover exactly which procedure is being called by this instruction
         if pInstruct.pProc is None and len([arg for arg in pInstruct.Arguments if arg.ArgType == ParamType.UNKNOWN]) == 0:
             # look for built-in procedures
-            if pInstruct.BuiltIn == True:
+            if pInstruct.bBuiltIn == True:
                 for proc in Builtin._procs:
                     if pInstruct.Name.lower() != proc.FullName and pInstruct.Name.lower() != proc.AbbrevName:
                         continue
@@ -415,7 +496,7 @@ class TT_App:
                     nFixups += 1
                     break
         # forward ParamTypes through MAKE/LOCALMAKE instructions
-        if pInstruct.BuiltIn is True and pInstruct.pProc is not None and (pInstruct.pProc.FullName == 'make' or pInstruct.pProc.FullName == 'localmake'):
+        if pInstruct.bBuiltIn is True and pInstruct.pProc is not None and (pInstruct.pProc.FullName == 'make' or pInstruct.pProc.FullName == 'localmake'):
             argtype = pInstruct.Arguments[1].ArgType
             if argtype != ParamType.UNKNOWN:
                 if pInstruct.pMakeVar.Type == ParamType.UNKNOWN:
@@ -425,7 +506,7 @@ class TT_App:
                     print "Logical error: %s instruction setting variable already type '%s' with argument of type '%s'" % (pInstruct.Name, ParamType.Names[pInstruct.pMakeVar.Type], ParamType.Names[argtype])
                     return None
         # forward ParamType from OUTPUT argument to procedure return type
-        if pInstruct.BuiltIn is True and pInstruct.pProc is not None and pInstruct.pProc.FullName == 'output':
+        if pInstruct.bBuiltIn is True and pInstruct.pProc is not None and pInstruct.pProc.FullName == 'output':
             argtype = pInstruct.Arguments[0].ArgType
             if argtype != ParamType.UNKNOWN:
                 if pCodeProc.ReturnType == ParamType.UNKNOWN:

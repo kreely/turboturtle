@@ -40,7 +40,7 @@ class Argument:
                         break
                 self.Elements.append(Element(elem[0], elem[1]))
                 for ch in elem[1]:
-                    if not (ch.isdigit() or ch == '.' or ch =='[' or ch == ']'):
+                    if ch not in '0123456789.':
                         self.ArgType = ParamType.LISTCODE
             # check bracket pairing
             if bracketDepth != 0:
@@ -258,9 +258,9 @@ class Argument:
         return None
 
 class Instruction:
-    def __init__(self, Name, BuiltIn, nParams, bParenthesized, bExtraArgs):
+    def __init__(self, Name, bBuiltIn, nParams, bParenthesized, bExtraArgs):
         self.Name = Name
-        self.BuiltIn = BuiltIn
+        self.bBuiltIn = bBuiltIn
         self.pProc = None
         self.pMakeVar = None
         self.nParams = nParams

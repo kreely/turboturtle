@@ -32,6 +32,7 @@ class Builtin:
 
         
 # full built-in procedure table
+Builtin.AddBuiltin(".setspecial",  None,    ParamType.NOTHING, False, False, ParamType.QUOTEDWORD, ParamType.NUMBER)
 Builtin.AddBuiltin("array",        None,    ParamType.ARRAY,   False, False, ParamType.NUMBER)
 Builtin.AddBuiltin("back",         "bk",    ParamType.NOTHING, False, False, ParamType.NUMBER)
 Builtin.AddBuiltin("clean",        None,    ParamType.NOTHING, False, False)
@@ -51,7 +52,6 @@ Builtin.AddBuiltin("penup",        "pu",    ParamType.NOTHING, False, False)
 Builtin.AddBuiltin("pendown",      "pd",    ParamType.NOTHING, False, False)
 Builtin.AddBuiltin("penerase",     "pe",    ParamType.NOTHING, False, False)
 Builtin.AddBuiltin("penpaint",     "ppt",   ParamType.NOTHING, False, False)
-Builtin.AddBuiltin("penreverse",   "px",    ParamType.NOTHING, False, False)
 Builtin.AddBuiltin("reverse",      None,    ParamType.LISTNUM, False, False, ParamType.LISTNUM)
 Builtin.AddBuiltin("repcount",     "#",     ParamType.NUMBER,  False, False)
 Builtin.AddBuiltin("repeat",       None,    ParamType.NOTHING, False, False, ParamType.NUMBER,     ParamType.LISTCODE)
@@ -61,5 +61,9 @@ Builtin.AddBuiltin("setbackground","setbg", ParamType.NOTHING, False, False, Par
 Builtin.AddBuiltin("setpencolor",  "setpc", ParamType.NOTHING, False, False, ParamType.NUMBER)
 Builtin.AddBuiltin("setpencolor",  "setpc", ParamType.NOTHING, False, False, ParamType.LISTNUM)
 Builtin.AddBuiltin("setpensize",   None,    ParamType.NOTHING, False, False, ParamType.NUMBER)
+Builtin.AddBuiltin("setscrunch",   None,    ParamType.NOTHING, False, False, ParamType.NUMBER,     ParamType.NUMBER)
+Builtin.AddBuiltin("stop",         None,    ParamType.NOTHING, False, False)
+Builtin.AddBuiltin("window",       None,    ParamType.NOTHING, False, False)
+Builtin.AddBuiltin("wrap",         None,    ParamType.NOTHING, False, False)
 
 
