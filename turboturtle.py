@@ -194,7 +194,8 @@ class TT_App:
         f.write(writer.OutputText)
         f.close()
 
-        # fixme debug
+
+    def DebugPrintCodeStructure(self):
         print "Main Code: %s\nMain Instructions:" % self.MainCode
         for instruct in self.MainInstructions:
             self.InstructPrint(instruct, 0)

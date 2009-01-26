@@ -425,14 +425,14 @@ class CppWriter():
         # write code to calculate the new X position
         if self.LogoState.bUseScrunch:
             ScrunchText = " * tt_ScrunchXY[0]"
-        self.OutputText += IndentText + "tt_NewPos[0] = tt_TurtlePos[0] %s cos(tt_TurtleDir) * %s" % (DirSign, "(" * nParen)
+        self.OutputText += IndentText + "tt_NewPos[0] = tt_TurtlePos[0] %s sin(tt_TurtleDir) * %s" % (DirSign, "(" * nParen)
         if not self.WriteArgument(Arg):
             return False
         self.OutputText += ")" * nParen + ScrunchText + ";\n"
         # write code to calculate the new Y position
         if self.LogoState.bUseScrunch:
             ScrunchText = " * tt_ScrunchXY[1]"
-        self.OutputText += IndentText + "tt_NewPos[1] = tt_TurtlePos[1] %s sin(tt_TurtleDir) * %s" % (DirSign, "(" * nParen)
+        self.OutputText += IndentText + "tt_NewPos[1] = tt_TurtlePos[1] %s cos(tt_TurtleDir) * %s" % (DirSign, "(" * nParen)
         if not self.WriteArgument(Arg):
             return False
         self.OutputText += ")" * nParen + ScrunchText + ";\n"
