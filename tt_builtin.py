@@ -42,6 +42,7 @@ Builtin.AddBuiltin("for",          None,    ParamType.NOTHING, False, False, Par
 Builtin.AddBuiltin("forever",      None,    ParamType.NOTHING, False, False, ParamType.LISTCODE)
 Builtin.AddBuiltin("forward",      "fd",    ParamType.NOTHING, False, False, ParamType.NUMBER)
 Builtin.AddBuiltin("fput",         None,    ParamType.LISTNUM, False, False, ParamType.NUMBER,     ParamType.LISTNUM)
+Builtin.AddBuiltin("home",         None,    ParamType.NOTHING, False, False)
 Builtin.AddBuiltin("left",         "lt",    ParamType.NOTHING, False, False, ParamType.NUMBER)
 Builtin.AddBuiltin("localmake",    None,    ParamType.NOTHING, False, False, ParamType.QUOTEDWORD, ParamType.ANYTHING)
 Builtin.AddBuiltin("lput",         None,    ParamType.LISTNUM, False, False, ParamType.NUMBER,     ParamType.LISTNUM)

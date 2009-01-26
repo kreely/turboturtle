@@ -186,7 +186,10 @@ class TT_App:
                 if not writer.WriteInstruction(instruct, 1, True):
                     return
             writer.OutputText += "}\n\n"
-        # Compilation done!  Save the output text into the destination file
+        # Compilation done!  Write the logo source code and save the output text into the destination file
+        writer.OutputText += "/***** The LOGO source code from which this file was compiled is given here *****/\n"
+        for line in InputCodeRaw.split('\n'):
+            writer.OutputText += "// %s\n" % line
         f = open(self.OutputName, 'w')
         f.write(writer.OutputText)
         f.close()

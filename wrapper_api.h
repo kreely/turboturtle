@@ -9,6 +9,9 @@
 void tt_LogoMain(void);
 
 // Functions in the OpenGL wrapper
+void wrapper_Clean(void);
+void wrapper_DrawLineSegment(float *pfOrigPos, float *pfNewPos, bool bWrapEnabled);
+void wrapper_DrawLineSegment(double *pdOrigPos, double *pdNewPos, bool bWrapEnabled);
 void wrapper_SetBackground(int iR, int iG, int iB);
 void wrapper_SetPenColor(int iR, int iG, int iB);
 void wrapper_SetPenPaint(bool bPaint);
