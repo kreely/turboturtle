@@ -263,6 +263,8 @@ class CppWriter():
 
     def WriteBuiltInInstruction(self, pInstruct, iIndent):
         IndentText = " " * (iIndent * self.IndentSize)
+        NextIndent = " " * ((iIndent+1) * self.IndentSize)
+        NumTypeLetter = self.LogoState.NumType[0]
         if pInstruct.pProc.FullName == ".setspecial":                       # .SETSPECIAL
             return True
         elif pInstruct.pProc.FullName == "back":                            # BACK
@@ -320,6 +322,15 @@ class CppWriter():
                 return False
         elif pInstruct.pProc.FullName == "home":                            # HOME
             self.OutputText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = tt_TurtleDir = 0.0;\n"
+        elif pInstruct.pProc.FullName == "if":                              # IF
+            self.OutputText += IndentText + "if ("
+            if not self.WriteArgument(pInstruct.Arguments[0]):
+                return False
+            self.OutputText += IndentText + ")\n" + IndentText + "{\n"
+            for instruct in pInstruct.Arguments[1].Elements[0].pInstruct:
+                if not self.WriteInstruction(instruct, iIndent + 1, True):
+                    return False
+            self.OutputText += IndentText + "}\n"
         elif pInstruct.pProc.FullName == "left":                            # LEFT
             if not self.WriteBuiltinTurn(IndentText, pInstruct.Arguments[0], "-"):
                 return False
@@ -328,6 +339,10 @@ class CppWriter():
             if not self.WriteArgument(pInstruct.Arguments[1]):
                 return False
             self.OutputText += ";\n"
+        elif pInstruct.pProc.FullName == "minus":                           # MINUS
+            self.OutputText += "-"
+            if not self.WriteArgument(pInstruct.Arguments[0]):
+                return False
         elif pInstruct.pProc.FullName == "output":                          # OUTPUT
             self.OutputText += IndentText + "return "
             if not self.WriteArgument(pInstruct.Arguments[0]):
@@ -343,6 +358,17 @@ class CppWriter():
         elif pInstruct.pProc.FullName == "penpaint":                        # PENPAINT
             self.OutputText += IndentText + "tt_PenPaint = true;\n"
             self.OutputText += IndentText + "glColor3ubv(tt_ColorPen);\n"
+        elif pInstruct.pProc.FullName == "power":                           # POWER
+            if self.LogoState.NumType == 'float':
+                self.OutputText += "powf("
+            else:
+                self.OutputText += "pow("
+            if not self.WriteArgument(pInstruct.Arguments[0]):
+                return False
+            self.OutputText += ", "
+            if not self.WriteArgument(pInstruct.Arguments[1]):
+                return False
+            self.OutputText += ")"
         elif pInstruct.pProc.FullName == "repcount":                        # REPCOUNT
             if self.LogoState.InnerLoopIdx == -1:
                 print "Syntax error: REPCOUNT instruction used outside of a FOREVER or REPEAT loop"
@@ -373,13 +399,18 @@ class CppWriter():
             if not self.WriteBuiltinSetColor(IndentText, pInstruct.Arguments[0], "tt_ColorPen"):
                 return False
             self.OutputText += IndentText + "if (tt_PenPaint == true)\n"
-            self.OutputText += IndentText + " " * self.IndentSize + "glColor3ubv(tt_ColorPen);\n"
+            self.OutputText += NextIndent + "glColor3ubv(tt_ColorPen);\n"
         elif pInstruct.pProc.FullName == "setpensize":                      # SETPENSIZE
             self.OutputText += IndentText + "glEnd();\n"
             self.OutputText += IndentText + "glLineWidth("
             if not self.WriteArgument(pInstruct.Arguments[0]):
                 return False
             self.OutputText += ");\n" + IndentText + "glBegin(GL_LINES);\n"
+        elif pInstruct.pProc.FullName == "setheading":                      # SETHEADING
+            self.OutputText += IndentText + "tt_TurtleDir = ("
+            if not self.WriteArgument(pInstruct.Arguments[0]):
+                return False
+            self.OutputText += ") * tt_RadDegree;\n"
         elif pInstruct.pProc.FullName == "setscrunch":                      # SETSCRUNCH
             self.OutputText += IndentText + "tt_ScrunchXY[0] = "
             if not self.WriteArgument(pInstruct.Arguments[0]):
@@ -389,6 +420,48 @@ class CppWriter():
             if not self.WriteArgument(pInstruct.Arguments[1]):
                 return False
             self.OutputText += ";\n"
+        elif pInstruct.pProc.FullName == "setxy":                           # SETXY
+            self.OutputText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
+            self.OutputText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
+            self.OutputText += NextIndent + "tt_TurtlePos[0] = "
+            if not self.WriteArgument(pInstruct.Arguments[0]):
+                return False
+            self.OutputText += ";\n" + NextIndent + "tt_TurtlePos[1] = "
+            if not self.WriteArgument(pInstruct.Arguments[1]):
+                return False
+            self.OutputText += ";\n" + NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
+            self.OutputText += IndentText + "}\n" + IndentText + "else\n" + IndentText + "{\n"
+            self.OutputText += NextIndent + "tt_TurtlePos[0] = "
+            if not self.WriteArgument(pInstruct.Arguments[0]):
+                return False
+            self.OutputText += ";\n" + NextIndent + "tt_TurtlePos[1] = "
+            if not self.WriteArgument(pInstruct.Arguments[1]):
+                return False
+            self.OutputText += ";\n" + IndentText + "}\n"
+        elif pInstruct.pProc.FullName == "setx":                            # SETX
+            self.OutputText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
+            self.OutputText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
+            self.OutputText += NextIndent + "tt_TurtlePos[0] = "
+            if not self.WriteArgument(pInstruct.Arguments[0]):
+                return False
+            self.OutputText += ";\n" + NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
+            self.OutputText += IndentText + "}\n" + IndentText + "else\n" + IndentText + "{\n"
+            self.OutputText += NextIndent + "tt_TurtlePos[0] = "
+            if not self.WriteArgument(pInstruct.Arguments[0]):
+                return False
+            self.OutputText += ";\n" + IndentText + "}\n"
+        elif pInstruct.pProc.FullName == "sety":                            # SETY
+            self.OutputText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
+            self.OutputText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
+            self.OutputText += NextIndent + "tt_TurtlePos[1] = "
+            if not self.WriteArgument(pInstruct.Arguments[0]):
+                return False
+            self.OutputText += ";\n" + NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
+            self.OutputText += IndentText + "}\n" + IndentText + "else\n" + IndentText + "{\n"
+            self.OutputText += NextIndent + "tt_TurtlePos[1] = "
+            if not self.WriteArgument(pInstruct.Arguments[0]):
+                return False
+            self.OutputText += ";\n" + IndentText + "}\n"
         elif pInstruct.pProc.FullName == "stop":                            # STOP
             self.OutputText += IndentText + "return;\n"
         elif pInstruct.pProc.FullName == "window":                          # WINDOW

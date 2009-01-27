@@ -339,4 +339,5 @@ class Instruction:
 # an unavoidable circular dependency among the Parser, Instruction, and Argument classes
 from tt_types import *
 from tt_parser import *
+from tt_builtin import *
 
