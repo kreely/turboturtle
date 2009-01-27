@@ -89,7 +89,6 @@ class CppWriter():
         self.OutputText += "static const %s tt_RadDegree = 3.141592653589793 / 180.0;\n" % self.LogoState.NumType
         self.OutputText += "%s tt_TurtlePos[2] = {0.0, 0.0};\n" % self.LogoState.NumType
         self.OutputText += "%s tt_TurtleDir = 0.0;\n" % self.LogoState.NumType
-        self.OutputText += "%s tt_NewPos[2] = {0.0, 0.0};\n" % self.LogoState.NumType
         self.OutputText += "bool tt_PenDown = true;\n"
         self.OutputText += "bool tt_PenPaint = true;\n"
         self.OutputText += "int tt_WindowSize = %i;\n" % self.LogoState.iWindowSize
@@ -167,15 +166,22 @@ class CppWriter():
 
     # Write out a single instruction (recursively)
     def WriteInstruction(self, pInstruct, iIndent, bTerminateLine):
+        text = self.GetCppInstruction(pInstruct, iIndent, bTerminateLine)
+        if text is None:
+            return False
+        self.OutputText += text
+        return True
+
+    def GetCppInstruction(self, pInstruct, iIndent, bTerminateLine):
         if pInstruct.bBuiltIn is True:
-            return self.WriteBuiltInInstruction(pInstruct, iIndent)
+            return self.GetCppBuiltInInstruction(pInstruct, iIndent)
         else:
-            if not self.WriteUserInstruction(pInstruct, iIndent):
+            text = self.GetCppUserInstruction(pInstruct, iIndent)
+            if text is None:
                 return False
             if bTerminateLine is True:
-                self.OutputText += ";\n"
-            return True
-            
+                text += ";\n"
+            return text
 
 #------------------------------------------------------------------------
 # Functions only for internal use by tt_cppwriter.py
@@ -204,335 +210,316 @@ class CppWriter():
         return False
 
     def WriteArgument(self, Arg):
-        if Arg.ArgType == ParamType.QUOTEDWORD:
-            self.OutputText += '"' + Arg.Elements[0].Text[1:] + '"'
-        elif Arg.ArgType == ParamType.ARRAY:
-            print "Internal error: Arrays not yet supported."
+        text = self.GetCppArgument(Arg)
+        if text is None:
             return False
-        elif Arg.ArgType == ParamType.LISTNUM:
-            print "Internal error: Lists not yet supported."
-            return False
-        elif Arg.ArgType in (ParamType.NUMBER, ParamType.BOOLEAN):
-            lastelem = None
-            for elem in Arg.Elements:
-                if elem.Type in (ElemType.OPEN_PAREN, ElemType.CLOSE_PAREN, ElemType.NUMBER, ElemType.BOOLEAN):
-                    self.OutputText += elem.Text
-                elif elem.Type == ElemType.INFIX_BOOL:
-                    if elem.Text in ("<", ">", "<=", ">="):
-                        self.OutputText += " " + elem.Text + " "
-                    elif elem.Text == "=":
-                        self.OutputText += " == "
-                    elif elem.Text == "<>":
-                        self.OutputText += " != "
-                    else:
-                        print "Internal error: invalid INFIX_BOOL element '%s' in WriteArgument()" % elem.Text
-                        return False
-                elif elem.Type == ElemType.INFIX_NUM:
-                    if lastelem is not None and lastelem.Type == ElemType.INFIX_NUM and elem.Text == '-':
-                        self.OutputText += "-"  # negative sign, don't include any spaces
-                    else:
-                        self.OutputText += " " + elem.Text + " "
-                elif elem.Type == ElemType.VAR_VALUE:
-                    self.OutputText += elem.pVariable.CppName
-                elif elem.Type == ElemType.FUNC_CALL:
-                    # recursively write a function call inside of a numeric/boolean expression
-                    if not self.WriteInstruction(elem.pInstruct, 0, False):
-                        return False
-                else:
-                    print "Internal error: invalid element type %i '%s' in WriteArgument()" % (elem.Type, elem.Text)
-                    return False
-                lastelem = elem
-        else:
-            print "Internal error: invalid argument type %i in WriteArgument()" % Arg.ArgType
-            return False
+        self.OutputText += text
         return True
 
-    def WriteUserInstruction(self, pInstruct, iIndent):
-        self.OutputText += " " * (iIndent * self.IndentSize)
-        self.OutputText += pInstruct.pProc.CppName + "("
+    def GetCppArgument(self, Arg):
+        if Arg.ArgType == ParamType.QUOTEDWORD:
+            return '"' + Arg.Elements[0].Text[1:] + '"'
+        elif Arg.ArgType == ParamType.ARRAY:
+            print "Internal error: Arrays not yet supported."
+            return None
+        elif Arg.ArgType == ParamType.LISTNUM:
+            print "Internal error: Lists not yet supported."
+            return None
+        elif Arg.ArgType in (ParamType.NUMBER, ParamType.BOOLEAN):
+            lastelem = None
+            CppText = ""
+            for elem in Arg.Elements:
+                if elem.Type in (ElemType.OPEN_PAREN, ElemType.CLOSE_PAREN, ElemType.NUMBER, ElemType.BOOLEAN):
+                    CppText += elem.Text
+                elif elem.Type == ElemType.INFIX_BOOL:
+                    if elem.Text in ("<", ">", "<=", ">="):
+                        CppText += " " + elem.Text + " "
+                    elif elem.Text == "=":
+                        CppText += " == "
+                    elif elem.Text == "<>":
+                        CppText += " != "
+                    else:
+                        print "Internal error: invalid INFIX_BOOL element '%s' in WriteArgument()" % elem.Text
+                        return None
+                elif elem.Type == ElemType.INFIX_NUM:
+                    if lastelem is not None and lastelem.Type == ElemType.INFIX_NUM and elem.Text == '-':
+                        CppText += "-"  # negative sign, don't include any spaces
+                    else:
+                        CppText += " " + elem.Text + " "
+                elif elem.Type == ElemType.VAR_VALUE:
+                    CppText += elem.pVariable.CppName
+                elif elem.Type == ElemType.FUNC_CALL:
+                    # recursively write a function call inside of a numeric/boolean expression
+                    codetext = self.GetCppInstruction(elem.pInstruct, 0, False)
+                    if codetext is None:
+                        return None
+                    CppText += codetext
+                else:
+                    print "Internal error: invalid element type %i '%s' in WriteArgument()" % (elem.Type, elem.Text)
+                    return None
+                lastelem = elem
+            return CppText
+        else:
+            print "Internal error: invalid argument type %i in WriteArgument()" % Arg.ArgType
+            return None
+        return None # should never reach this point
+
+    def GetCppUserInstruction(self, pInstruct, iIndent):
+        cpptext = " " * (iIndent * self.IndentSize)
+        cpptext += pInstruct.pProc.CppName + "("
         bFirst = True
         for arg in pInstruct.Arguments:
             if bFirst is True:
                 bFirst = False
             else:
-                self.OutputText += ", "
-            if not self.WriteArgument(arg):
+                cpptext += ", "
+            argtext = self.GetCppArgument(arg)
+            if argtext is None:
                 return None
-        self.OutputText += ")"
-        return True
+            cpptext += argtext
+        return cpptext + ")"
 
-    def WriteBuiltInInstruction(self, pInstruct, iIndent):
+    def GetCppBuiltInInstruction(self, pInstruct, iIndent):
         IndentText = " " * (iIndent * self.IndentSize)
         NextIndent = " " * ((iIndent+1) * self.IndentSize)
         NumTypeLetter = self.LogoState.NumType[0]
+        CppText = ""
+        # get the C++ code for each argument in this instruction
+        ArgText = []
+        for arg in pInstruct.Arguments:
+            if arg.ArgType == ParamType.LISTCODE:
+                ArgText.append("")
+            else:
+                text = self.GetCppArgument(arg)
+                if text is None:
+                    return None
+                ArgText.append(text)
+        # now handle the particular instruction
         if pInstruct.pProc.FullName == ".setspecial":                       # .SETSPECIAL
-            return True
+            return ""
         elif pInstruct.pProc.FullName == "back":                            # BACK
-            if not self.WriteBuiltinMove(IndentText, pInstruct.Arguments[0], "-"):
-                return False
+            return self.GetCppBuiltinMove(IndentText, pInstruct.Arguments[0], "-")
         elif pInstruct.pProc.FullName == "clean":                           # CLEAN
-            self.OutputText += IndentText + "wrapper_Clean();\n"
+            CppText += IndentText + "wrapper_Clean();\n"
         elif pInstruct.pProc.FullName == "clearscreen":                     # CLEARSCREEN
             # just move to HOME position and call clean
-            self.OutputText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = tt_TurtleDir = 0.0;\n"
-            self.OutputText += IndentText + "wrapper_Clean();\n"
+            CppText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = tt_TurtleDir = 0.0;\n"
+            CppText += IndentText + "wrapper_Clean();\n"
         elif pInstruct.pProc.FullName == "for":                             # FOR
             my_temp = self.LogoState.TempIdx
             self.LogoState.TempIdx += 1
             varname = pInstruct.pMakeVar.CppName
-            # write code to set the start value for the FOR loop
-            self.OutputText += IndentText + "%s start%02i = " % (self.LogoState.NumType, my_temp)
-            if not self.WriteArgument(pInstruct.Arguments[1]):
-                return False
-            self.OutputText += ";\n"
-            # write code to set the limit value for the FOR loop
-            self.OutputText += IndentText + "%s limit%02i = " % (self.LogoState.NumType, my_temp)
-            if not self.WriteArgument(pInstruct.Arguments[2]):
-                return False
-            self.OutputText += ";\n"
+            # write code to set the start and limit values for the FOR loop
+            CppText += IndentText + "%s start%02i = %s;\n" % (self.LogoState.NumType, my_temp, ArgText[1])
+            CppText += IndentText + "%s limit%02i = %s;\n" % (self.LogoState.NumType, my_temp, ArgText[2])
             # write code to set the step size
             if pInstruct.Arguments[3].ArgType == ParamType.NUMBER:
                 CodeList = pInstruct.Arguments[4].Elements[0].pInstruct
-                self.OutputText += IndentText + "%s step%02i = " % (self.LogoState.NumType, my_temp)
-                if not self.WriteArgument(pInstruct.Arguments[3]):
-                    return False
-                self.OutputText += ";\n"
+                CppText += IndentText + "%s step%02i = %s;\n" % (self.LogoState.NumType, my_temp, ArgText[3])
             else:
                 CodeList = pInstruct.Arguments[3].Elements[0].pInstruct
-                self.OutputText += IndentText + "%s step%02i = start%02i <= limit%02i ? 1.0 : -1.0;\n" % (self.LogoState.NumType, my_temp, my_temp, my_temp)
+                CppText += IndentText + "%s step%02i = start%02i <= limit%02i ? 1.0 : -1.0;\n" % (self.LogoState.NumType, my_temp, my_temp, my_temp)
             # now write the FOR loop
-            self.OutputText += IndentText + "for (%s = start%02i; (%s - limit%02i) * step%02i <= 0.0; %s += step%02i)\n" % (varname, my_temp, varname, my_temp, my_temp, varname, my_temp)
-            self.OutputText += IndentText + "{\n"
+            CppText += IndentText + "for (%s = start%02i; (%s - limit%02i) * step%02i <= 0.0; %s += step%02i)\n" % (varname, my_temp, varname, my_temp, my_temp, varname, my_temp)
+            CppText += IndentText + "{\n"
             for instruct in CodeList:
-                if not self.WriteInstruction(instruct, iIndent + 1, True):
-                    return False
-            self.OutputText += IndentText + "}\n"
+                codetext = self.GetCppInstruction(instruct, iIndent + 1, True)
+                if codetext is None:
+                    return None
+                CppText += codetext
+            CppText += IndentText + "}\n"
         elif pInstruct.pProc.FullName == "forever":                         # FOREVER
             my_counter = self.LogoState.LoopIdx
             self.LogoState.LoopIdx += 1
-            self.OutputText += IndentText + "for (int loop%02i=1; ; loop%02i++)\n%s{\n" % (my_counter, my_counter, IndentText)
+            CppText += IndentText + "for (int loop%02i=1; ; loop%02i++)\n%s{\n" % (my_counter, my_counter, IndentText)
             for instruct in pInstruct.Arguments[0].Elements[0].pInstruct:
                 self.LogoState.InnerLoopIdx = my_counter
-                if not self.WriteInstruction(instruct, iIndent + 1, True):
-                    return False
-            self.OutputText += IndentText + "}\n"
+                codetext = self.GetCppInstruction(instruct, iIndent + 1, True)
+                if codetext is None:
+                    return None
+                CppText += codetext
+            CppText += IndentText + "}\n"
             self.LogoState.InnerLoopIdx = -1
         elif pInstruct.pProc.FullName == "forward":                         # FORWARD
-            if not self.WriteBuiltinMove(IndentText, pInstruct.Arguments[0], "+"):
-                return False
+            return self.GetCppBuiltinMove(IndentText, pInstruct.Arguments[0], "+")
         elif pInstruct.pProc.FullName == "home":                            # HOME
-            self.OutputText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = tt_TurtleDir = 0.0;\n"
+            CppText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = tt_TurtleDir = 0.0;\n"
         elif pInstruct.pProc.FullName == "if":                              # IF
-            self.OutputText += IndentText + "if ("
-            if not self.WriteArgument(pInstruct.Arguments[0]):
-                return False
-            self.OutputText += IndentText + ")\n" + IndentText + "{\n"
+            CppText += IndentText + "if (%s)\n" % ArgText[0] + IndentText + "{\n"
             for instruct in pInstruct.Arguments[1].Elements[0].pInstruct:
-                if not self.WriteInstruction(instruct, iIndent + 1, True):
-                    return False
-            self.OutputText += IndentText + "}\n"
+                codetext = self.GetCppInstruction(instruct, iIndent + 1, True)
+                if codetext is None:
+                    return None
+                CppText += codetext
+            CppText += IndentText + "}\n"
         elif pInstruct.pProc.FullName == "left":                            # LEFT
-            if not self.WriteBuiltinTurn(IndentText, pInstruct.Arguments[0], "-"):
-                return False
+            return self.GetCppBuiltinTurn(IndentText, pInstruct.Arguments[0], "-")
         elif pInstruct.pProc.FullName in ("localmake", "make"):             # LOCALMAKE, MAKE
-            self.OutputText += IndentText + pInstruct.pMakeVar.CppName + " = "
-            if not self.WriteArgument(pInstruct.Arguments[1]):
-                return False
-            self.OutputText += ";\n"
+            CppText += IndentText + pInstruct.pMakeVar.CppName + " = " + ArgText[1] + ";\n"
         elif pInstruct.pProc.FullName == "minus":                           # MINUS
-            self.OutputText += "-"
-            if not self.WriteArgument(pInstruct.Arguments[0]):
-                return False
+            CppText += "-" + ArgText[0]
         elif pInstruct.pProc.FullName == "output":                          # OUTPUT
-            self.OutputText += IndentText + "return "
-            if not self.WriteArgument(pInstruct.Arguments[0]):
-                return False
-            self.OutputText += ";\n"
+            CppText += IndentText + "return %s;\n" % ArgText[0]
         elif pInstruct.pProc.FullName == "penup":                           # PENUP
-            self.OutputText += IndentText + "tt_PenDown = false;\n"
+            CppText += IndentText + "tt_PenDown = false;\n"
         elif pInstruct.pProc.FullName == "pendown":                         # PENDOWN
-            self.OutputText += IndentText + "tt_PenDown = true;\n"
+            CppText += IndentText + "tt_PenDown = true;\n"
         elif pInstruct.pProc.FullName == "penerase":                        # PENERASE
-            self.OutputText += IndentText + "tt_PenPaint = false;\n"
-            self.OutputText += IndentText + "glColor3ubv(tt_ColorBackground);\n"
+            CppText += IndentText + "tt_PenPaint = false;\n"
+            CppText += IndentText + "glColor3ubv(tt_ColorBackground);\n"
         elif pInstruct.pProc.FullName == "penpaint":                        # PENPAINT
-            self.OutputText += IndentText + "tt_PenPaint = true;\n"
-            self.OutputText += IndentText + "glColor3ubv(tt_ColorPen);\n"
+            CppText += IndentText + "tt_PenPaint = true;\n"
+            CppText += IndentText + "glColor3ubv(tt_ColorPen);\n"
         elif pInstruct.pProc.FullName == "power":                           # POWER
             if self.LogoState.NumType == 'float':
-                self.OutputText += "powf("
+                CppText += "powf(%s, %s)" % (ArgText[0], ArgText[1])
             else:
-                self.OutputText += "pow("
-            if not self.WriteArgument(pInstruct.Arguments[0]):
-                return False
-            self.OutputText += ", "
-            if not self.WriteArgument(pInstruct.Arguments[1]):
-                return False
-            self.OutputText += ")"
+                CppText += "pow(%s, %s)" % (ArgText[0], ArgText[1])
         elif pInstruct.pProc.FullName == "repcount":                        # REPCOUNT
             if self.LogoState.InnerLoopIdx == -1:
                 print "Syntax error: REPCOUNT instruction used outside of a FOREVER or REPEAT loop"
-                return False
-            self.OutputText += "loop%02i" % self.LogoState.InnerLoopIdx
+                return None
+            CppText += "loop%02i" % self.LogoState.InnerLoopIdx
         elif pInstruct.pProc.FullName == "repeat":                          # REPEAT
             my_counter = self.LogoState.LoopIdx
             self.LogoState.LoopIdx += 1
-            self.OutputText += IndentText + "for (int loop%02i=1; loop%02i <= " % (my_counter, my_counter)
-            if not self.WriteArgument(pInstruct.Arguments[0]):
-                return False
-            self.OutputText += "; loop%02i++)\n%s{\n" % (my_counter, IndentText)
+            CppText += IndentText + "for (int loop%02i=1; loop%02i <= %s; loop%02i++)\n" % (my_counter, my_counter, ArgText[0], my_counter)
+            CppText += IndentText + "{\n"
             for instruct in pInstruct.Arguments[1].Elements[0].pInstruct:
                 self.LogoState.InnerLoopIdx = my_counter
-                if not self.WriteInstruction(instruct, iIndent + 1, True):
-                    return False
-            self.OutputText += IndentText + "}\n"
+                codetext = self.GetCppInstruction(instruct, iIndent + 1, True)
+                if codetext is None:
+                    return None
+                CppText += codetext
+            CppText += IndentText + "}\n"
             self.LogoState.InnerLoopIdx = -1
         elif pInstruct.pProc.FullName == "right":                           # RIGHT
-            if not self.WriteBuiltinTurn(IndentText, pInstruct.Arguments[0], "+"):
-                return False
+            return self.GetCppBuiltinTurn(IndentText, pInstruct.Arguments[0], "+")
         elif pInstruct.pProc.FullName == "setbackground":                   # SETBACKGROUND
-            if not self.WriteBuiltinSetColor(IndentText, pInstruct.Arguments[0], "tt_ColorBackground"):
-                return False
-            self.OutputText += IndentText + "if (tt_PenPaint == false)\n"
-            self.OutputText += IndentText + " " * self.IndentSize + "glColor3ubv(tt_ColorBackground);\n"
+            codetext = self.GetCppBuiltinSetColor(IndentText, pInstruct.Arguments[0], "tt_ColorBackground")
+            if codetext is None:
+                return None
+            CppText += codetext
+            CppText += IndentText + "if (tt_PenPaint == false)\n"
+            CppText += IndentText + " " * self.IndentSize + "glColor3ubv(tt_ColorBackground);\n"
         elif pInstruct.pProc.FullName == "setpencolor":                     # SETPENCOLOR
-            if not self.WriteBuiltinSetColor(IndentText, pInstruct.Arguments[0], "tt_ColorPen"):
-                return False
-            self.OutputText += IndentText + "if (tt_PenPaint == true)\n"
-            self.OutputText += NextIndent + "glColor3ubv(tt_ColorPen);\n"
+            codetext = self.GetCppBuiltinSetColor(IndentText, pInstruct.Arguments[0], "tt_ColorPen")
+            if codetext is None:
+                return None
+            CppText += codetext
+            CppText += IndentText + "if (tt_PenPaint == true)\n"
+            CppText += NextIndent + "glColor3ubv(tt_ColorPen);\n"
         elif pInstruct.pProc.FullName == "setpensize":                      # SETPENSIZE
-            self.OutputText += IndentText + "glEnd();\n"
-            self.OutputText += IndentText + "glLineWidth("
-            if not self.WriteArgument(pInstruct.Arguments[0]):
-                return False
-            self.OutputText += ");\n" + IndentText + "glBegin(GL_LINES);\n"
+            CppText += IndentText + "glEnd();\n"
+            CppText += IndentText + "glLineWidth(%s);\n" % ArgText[0]
+            CppText += IndentText + "glBegin(GL_LINES);\n"
         elif pInstruct.pProc.FullName == "setheading":                      # SETHEADING
-            self.OutputText += IndentText + "tt_TurtleDir = ("
-            if not self.WriteArgument(pInstruct.Arguments[0]):
-                return False
-            self.OutputText += ") * tt_RadDegree;\n"
+            CppText += IndentText + "tt_TurtleDir = (%s) * tt_RadDegree;\n" % ArgText[0]
         elif pInstruct.pProc.FullName == "setscrunch":                      # SETSCRUNCH
-            self.OutputText += IndentText + "tt_ScrunchXY[0] = "
-            if not self.WriteArgument(pInstruct.Arguments[0]):
-                return False
-            self.OutputText += ";\n"
-            self.OutputText += IndentText + "tt_ScrunchXY[1] = "
-            if not self.WriteArgument(pInstruct.Arguments[1]):
-                return False
-            self.OutputText += ";\n"
+            CppText += IndentText + "tt_ScrunchXY[0] = %s;\n" % ArgText[0]
+            CppText += IndentText + "tt_ScrunchXY[1] = %s;\n" % ArgText[1]
         elif pInstruct.pProc.FullName == "setxy":                           # SETXY
-            self.OutputText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
-            self.OutputText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
-            self.OutputText += NextIndent + "tt_TurtlePos[0] = "
-            if not self.WriteArgument(pInstruct.Arguments[0]):
-                return False
-            self.OutputText += ";\n" + NextIndent + "tt_TurtlePos[1] = "
-            if not self.WriteArgument(pInstruct.Arguments[1]):
-                return False
-            self.OutputText += ";\n" + NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
-            self.OutputText += IndentText + "}\n" + IndentText + "else\n" + IndentText + "{\n"
-            self.OutputText += NextIndent + "tt_TurtlePos[0] = "
-            if not self.WriteArgument(pInstruct.Arguments[0]):
-                return False
-            self.OutputText += ";\n" + NextIndent + "tt_TurtlePos[1] = "
-            if not self.WriteArgument(pInstruct.Arguments[1]):
-                return False
-            self.OutputText += ";\n" + IndentText + "}\n"
+            CppText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
+            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
+            CppText += NextIndent + "tt_TurtlePos[0] = %s;\n" % ArgText[0]
+            CppText += NextIndent + "tt_TurtlePos[1] = %s;\n" % ArgText[1]
+            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
+            CppText += IndentText + "}\n" + IndentText + "else\n" + IndentText + "{\n"
+            CppText += NextIndent + "tt_TurtlePos[0] = %s;\n" % ArgText[0]
+            CppText += NextIndent + "tt_TurtlePos[1] = %s;\n" % ArgText[1]
+            CppText += IndentText + "}\n"
         elif pInstruct.pProc.FullName == "setx":                            # SETX
-            self.OutputText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
-            self.OutputText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
-            self.OutputText += NextIndent + "tt_TurtlePos[0] = "
-            if not self.WriteArgument(pInstruct.Arguments[0]):
-                return False
-            self.OutputText += ";\n" + NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
-            self.OutputText += IndentText + "}\n" + IndentText + "else\n" + IndentText + "{\n"
-            self.OutputText += NextIndent + "tt_TurtlePos[0] = "
-            if not self.WriteArgument(pInstruct.Arguments[0]):
-                return False
-            self.OutputText += ";\n" + IndentText + "}\n"
+            CppText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
+            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
+            CppText += NextIndent + "tt_TurtlePos[0] = %s;\n" % ArgText[0]
+            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
+            CppText += IndentText + "}\n" + IndentText + "else\n" + IndentText + "{\n"
+            CppText += NextIndent + "tt_TurtlePos[0] = %s;\n" % ArgText[0]
+            CppText += IndentText + "}\n"
         elif pInstruct.pProc.FullName == "sety":                            # SETY
-            self.OutputText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
-            self.OutputText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
-            self.OutputText += NextIndent + "tt_TurtlePos[1] = "
-            if not self.WriteArgument(pInstruct.Arguments[0]):
-                return False
-            self.OutputText += ";\n" + NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
-            self.OutputText += IndentText + "}\n" + IndentText + "else\n" + IndentText + "{\n"
-            self.OutputText += NextIndent + "tt_TurtlePos[1] = "
-            if not self.WriteArgument(pInstruct.Arguments[0]):
-                return False
-            self.OutputText += ";\n" + IndentText + "}\n"
+            CppText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
+            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
+            CppText += NextIndent + "tt_TurtlePos[1] = %s;\n" % ArgText[0]
+            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeLetter
+            CppText += IndentText + "}\n" + IndentText + "else\n" + IndentText + "{\n"
+            CppText += NextIndent + "tt_TurtlePos[1] = %s;\n" % ArgText[0]
+            CppText += IndentText + "}\n"
         elif pInstruct.pProc.FullName == "stop":                            # STOP
-            self.OutputText += IndentText + "return;\n"
+            CppText += IndentText + "return;\n"
         elif pInstruct.pProc.FullName == "window":                          # WINDOW
-            self.OutputText += IndentText + "tt_UseWrap = false;\n"
+            CppText += IndentText + "tt_UseWrap = false;\n"
         elif pInstruct.pProc.FullName == "wrap":                            # WRAP
-            self.OutputText += IndentText + "tt_UseWrap = true;\n"
+            CppText += IndentText + "tt_UseWrap = true;\n"
         else:
             print "Internal error: built-in instruction named '%s' is not implemented" % pInstruct.Name
-            return False
-        return True
+            return None
+        return CppText
 
-    def WriteBuiltinSetColor(self, IndentText, Arg, DestColorArray):
+    def GetCppBuiltinSetColor(self, IndentText, Arg, DestColorArray):
         if Arg.ArgType == ParamType.LISTNUM:
             print "Internal error: Lists not yet supported."
-            return False
+            return None
         else: # must be ParamType.NUMBER
-            nParen = 0
+            ArgText = self.GetCppArgument(Arg)
+            if ArgText is None:
+                return None
             if len(Arg.Elements) > 1:
-                nParen = 1
-            my_temp = self.LogoState.TempIdx
-            self.LogoState.TempIdx += 1
-            self.OutputText += IndentText + "int color%02i = (int) " % my_temp + "(" * nParen
-            if not self.WriteArgument(Arg):
-                return False
-            self.OutputText += ")" * nParen + " & 15;\n"
-            self.OutputText += IndentText + "*((int *)%s) = *((int *) tt_Colors[color%02i]);\n" % (DestColorArray, my_temp)
-        return True
+                ArgText = "(" + ArgText + ")"
+            CppText = IndentText + "*((int *)%s) = *((int *) tt_Colors[(int) %s & 15]);\n" % (DestColorArray, ArgText)
+        return CppText
 
-    def WriteBuiltinTurn(self, IndentText, Arg, Sign):
-        nParen = 0
+    def GetCppBuiltinTurn(self, IndentText, Arg, Sign):
+        ArgText = self.GetCppArgument(Arg)
+        if ArgText is None:
+            return None
         if len(Arg.Elements) > 1:
-            nParen = 1
-        self.OutputText += IndentText + "tt_TurtleDir " + Sign + "= " + "(" * nParen
-        if not self.WriteArgument(Arg):
-            return False
-        self.OutputText += ")" * nParen + " * tt_RadDegree;\n"
-        return True
+            ArgText = "(" + ArgText + ")"
+        CppText = IndentText + "tt_TurtleDir " + Sign + "= " + ArgText + " * tt_RadDegree;\n"
+        return CppText
 
-    def WriteBuiltinMove(self, IndentText, Arg, DirSign):
+    def GetCppBuiltinMove(self, IndentText, Arg, DirSign):
+        NumTypeGL = self.LogoState.NumType[0]
+        if NumTypeGL == "f":
+            NumTypeMath = "f"
+        else:
+            NumTypeMath = ""
         NextIndent = IndentText + " " * self.IndentSize
         ScrunchText = ""
-        nParen = 0
+        CppText = ""
+        # get the code text for the argument
+        ArgText = self.GetCppArgument(Arg)
+        if ArgText is None:
+            return None
         if len(Arg.Elements) > 1:
-            nParen = 1
-        # write code to calculate the new X position
+            ArgText = "(" + ArgText + ")"
+        # write expression to calculate the new X position
         if self.LogoState.bUseScrunch:
             ScrunchText = " * tt_ScrunchXY[0]"
-        self.OutputText += IndentText + "tt_NewPos[0] = tt_TurtlePos[0] %s sin(tt_TurtleDir) * %s" % (DirSign, "(" * nParen)
-        if not self.WriteArgument(Arg):
-            return False
-        self.OutputText += ")" * nParen + ScrunchText + ";\n"
-        # write code to calculate the new Y position
+        NewXText = "tt_TurtlePos[0] %s sin%s(tt_TurtleDir) * %s%s;\n" % (DirSign, NumTypeMath, ArgText, ScrunchText)
+        # write expression to calculate the new Y position
         if self.LogoState.bUseScrunch:
             ScrunchText = " * tt_ScrunchXY[1]"
-        self.OutputText += IndentText + "tt_NewPos[1] = tt_TurtlePos[1] %s cos(tt_TurtleDir) * %s" % (DirSign, "(" * nParen)
-        if not self.WriteArgument(Arg):
-            return False
-        self.OutputText += ")" * nParen + ScrunchText + ";\n"
+        NewYText = "tt_TurtlePos[1] %s cos%s(tt_TurtleDir) * %s%s;\n" % (DirSign, NumTypeMath, ArgText, ScrunchText)
         # write code to draw the line
         if self.LogoState.bUseWrap:
-            self.OutputText += IndentText + "if (tt_PenDown)\n" + NextIndent + "wrapper_DrawLineSegment(tt_TurtlePos, tt_NewPos, tt_UseWrap);\n"
+            CppText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
+            CppText += NextIndent + "%s NewPos[2];\n" % self.LogoState.NumType
+            CppText += NextIndent + "NewPos[0] = " + NewXText
+            CppText += NextIndent + "NewPos[1] = " + NewYText
+            CppText += NextIndent + "wrapper_DrawLineSegment(tt_TurtlePos, NewPos, tt_UseWrap);\n"
+            CppText += NextIndent + "tt_TurtlePos[0] = NewPos[0];\n" + NextIndent + "tt_TurtlePos[1] = NewPos[1];\n"
+            CppText += IndentText + "} else {\n"
         else:
-            self.OutputText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n" + NextIndent
-            if self.LogoState.NumType == 'float':
-                self.OutputText += "glVertex2f(tt_TurtlePos[0], tt_TurtlePos[1]);\n" + NextIndent
-                self.OutputText += "glVertex2f(tt_NewPos[0], tt_NewPos[1]);\n" + IndentText + "}\n"
-            else:
-                self.OutputText += "glVertex2d(tt_TurtlePos[0], tt_TurtlePos[1]);\n" + NextIndent
-                self.OutputText += "glVertex2d(tt_NewPos[0], tt_NewPos[1]);\n" + IndentText + "}\n"
-        # write code to set the current position to the new position
-        self.OutputText += IndentText + "tt_TurtlePos[0] = tt_NewPos[0];\n" + IndentText + "tt_TurtlePos[1] = tt_NewPos[1];\n"
-        return True
+            CppText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
+            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
+            CppText += NextIndent + "tt_TurtlePos[0] = " + NewXText
+            CppText += NextIndent + "tt_TurtlePos[1] = " + NewYText
+            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
+            CppText += IndentText + "} else {\n"
+        # write code for the PenUp case
+        CppText += NextIndent + "tt_TurtlePos[0] = " + NewXText
+        CppText += NextIndent + "tt_TurtlePos[1] = " + NewYText
+        CppText += IndentText + "}\n"
+        return CppText
 
 
