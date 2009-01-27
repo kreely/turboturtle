@@ -7,6 +7,7 @@
 
 // Functions and data in the compiled Logo C++ file
 void tt_LogoMain(void);
+extern int           tt_WindowSize;
 extern unsigned char tt_ColorPen[];
 extern unsigned char tt_ColorBackground[];
 

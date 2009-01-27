@@ -92,6 +92,7 @@ class CppWriter():
         self.OutputText += "%s tt_NewPos[2] = {0.0, 0.0};\n" % self.LogoState.NumType
         self.OutputText += "bool tt_PenDown = true;\n"
         self.OutputText += "bool tt_PenPaint = true;\n"
+        self.OutputText += "int tt_WindowSize = %i;\n" % self.LogoState.iWindowSize
         self.OutputText += "unsigned char tt_ColorPen[4] = {255,255,255,0};\n"
         self.OutputText += "unsigned char tt_ColorBackground[4] = {0,0,0,0};\n"
         if self.LogoState.bNeedColors:

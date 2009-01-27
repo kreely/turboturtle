@@ -131,7 +131,7 @@ bool InitGL(int iWidth, int iHeight)
     glLoadIdentity();
 
     // don't use perspective
-    glOrtho(-200, 200, -200, 200, -1, 1);
+    glOrtho(-tt_WindowSize/2, tt_WindowSize/2, -tt_WindowSize/2, tt_WindowSize/2, -1, 1);
 
     // set up z-buffer parameters
     glDisable(GL_DEPTH_TEST);

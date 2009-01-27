@@ -1,0 +1,8 @@
+; Polygons, from: http://www.s193653721.websitehome.co.uk/logoarts/progs/demo/demopoly.html
+
+.setspecial "highprecision 1
+.setspecial "windowsize 400
+
+PenUp Back 180 Right 90 Back 40 PenDown SetPenColor 2
+For [N 3 14] [Repeat :N [Forward 80 Left 360/:N] ]
+
