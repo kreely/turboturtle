@@ -7,14 +7,11 @@
 
 // Functions and data in the compiled Logo C++ file
 void tt_LogoMain(void);
+extern unsigned char tt_ColorPen[];
+extern unsigned char tt_ColorBackground[];
 
 // Functions in the OpenGL wrapper
 void wrapper_Clean(void);
 void wrapper_DrawLineSegment(float *pfOrigPos, float *pfNewPos, bool bWrapEnabled);
 void wrapper_DrawLineSegment(double *pdOrigPos, double *pdNewPos, bool bWrapEnabled);
-void wrapper_SetBackground(int iR, int iG, int iB);
-void wrapper_SetPenColor(int iR, int iG, int iB);
-void wrapper_SetPenPaint(bool bPaint);
-void wrapper_SetPenSize(float fSize);
-void wrapper_SetPenSize(double dSize);
 

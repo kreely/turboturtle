@@ -142,7 +142,7 @@ bool InitGL(int iWidth, int iHeight)
     glDisable(GL_LIGHTING);
 
     // clear the screen
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT);
     SDL_GL_SwapBuffers();
     glColor3ub(255, 255, 255);
 
@@ -163,25 +163,4 @@ void wrapper_DrawLineSegment(float *pfOrigPos, float *pfNewPos, bool bWrapEnable
 void wrapper_DrawLineSegment(double *pdOrigPos, double *pdNewPos, bool bWrapEnabled)
 {
 }
-
-void wrapper_SetBackground(int iR, int iG, int iB)
-{
-}
-
-void wrapper_SetPenColor(int iR, int iG, int iB)
-{
-}
-
-void wrapper_SetPenPaint(bool bPaint)
-{
-}
-
-void wrapper_SetPenSize(float fSize)
-{
-}
-
-void wrapper_SetPenSize(double dSize)
-{
-}
-
 

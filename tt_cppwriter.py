@@ -91,6 +91,9 @@ class CppWriter():
         self.OutputText += "%s tt_TurtleDir = 0.0;\n" % self.LogoState.NumType
         self.OutputText += "%s tt_NewPos[2] = {0.0, 0.0};\n" % self.LogoState.NumType
         self.OutputText += "bool tt_PenDown = true;\n"
+        self.OutputText += "bool tt_PenPaint = true;\n"
+        self.OutputText += "unsigned char tt_ColorPen[4] = {255,255,255,0};\n"
+        self.OutputText += "unsigned char tt_ColorBackground[4] = {0,0,0,0};\n"
         if self.LogoState.bNeedColors:
             self.OutputText += "unsigned char tt_Colors[16][4] = {{0,0,0,0}, {0,0,255,0}, {0,255,0,0}, {0,255,255,0}, {255,0,0,0}, {255,0,255,0}, {255,255,0,0}, {255,255,255,0}, {160,82,45,0}, {210,180,140,0}, {34,139,34,0}, {127,255,212,0}, {250,128,114,0}, {128,0,128,0}, {255,165,0,0}, {128,128,128,0}};\n"
         if self.LogoState.bUseScrunch:
@@ -334,9 +337,11 @@ class CppWriter():
         elif pInstruct.pProc.FullName == "pendown":                         # PENDOWN
             self.OutputText += IndentText + "tt_PenDown = true;\n"
         elif pInstruct.pProc.FullName == "penerase":                        # PENERASE
-            self.OutputText += IndentText + "wrapper_SetPenPaint(false);\n"
+            self.OutputText += IndentText + "tt_PenPaint = false;\n"
+            self.OutputText += IndentText + "glColor3ubv(tt_ColorBackground);\n"
         elif pInstruct.pProc.FullName == "penpaint":                        # PENPAINT
-            self.OutputText += IndentText + "wrapper_SetPenPaint(true);\n"
+            self.OutputText += IndentText + "tt_PenPaint = true;\n"
+            self.OutputText += IndentText + "glColor3ubv(tt_ColorPen);\n"
         elif pInstruct.pProc.FullName == "repcount":                        # REPCOUNT
             if self.LogoState.InnerLoopIdx == -1:
                 print "Syntax error: REPCOUNT instruction used outside of a FOREVER or REPEAT loop"
@@ -359,16 +364,21 @@ class CppWriter():
             if not self.WriteBuiltinTurn(IndentText, pInstruct.Arguments[0], "+"):
                 return False
         elif pInstruct.pProc.FullName == "setbackground":                   # SETBACKGROUND
-            if not self.WriteBuiltinSetColor(IndentText, pInstruct.Arguments[0], "wrapper_SetBackground"):
+            if not self.WriteBuiltinSetColor(IndentText, pInstruct.Arguments[0], "tt_ColorBackground"):
                 return False
+            self.OutputText += IndentText + "if (tt_PenPaint == false)\n"
+            self.OutputText += IndentText + " " * self.IndentSize + "glColor3ubv(tt_ColorBackground);\n"
         elif pInstruct.pProc.FullName == "setpencolor":                     # SETPENCOLOR
-            if not self.WriteBuiltinSetColor(IndentText, pInstruct.Arguments[0], "wrapper_SetPenColor"):
+            if not self.WriteBuiltinSetColor(IndentText, pInstruct.Arguments[0], "tt_ColorPen"):
                 return False
+            self.OutputText += IndentText + "if (tt_PenPaint == true)\n"
+            self.OutputText += IndentText + " " * self.IndentSize + "glColor3ubv(tt_ColorPen);\n"
         elif pInstruct.pProc.FullName == "setpensize":                      # SETPENSIZE
-            self.OutputText += IndentText + "wrapper_SetPenSize("
+            self.OutputText += IndentText + "glEnd();\n"
+            self.OutputText += IndentText + "glLineWidth("
             if not self.WriteArgument(pInstruct.Arguments[0]):
                 return False
-            self.OutputText += ");\n"
+            self.OutputText += ");\n" + IndentText + "glBegin(GL_LINES);\n"
         elif pInstruct.pProc.FullName == "setscrunch":                      # SETSCRUNCH
             self.OutputText += IndentText + "tt_ScrunchXY[0] = "
             if not self.WriteArgument(pInstruct.Arguments[0]):
@@ -389,7 +399,7 @@ class CppWriter():
             return False
         return True
 
-    def WriteBuiltinSetColor(self, IndentText, Arg, CoreFunc):
+    def WriteBuiltinSetColor(self, IndentText, Arg, DestColorArray):
         if Arg.ArgType == ParamType.LISTNUM:
             print "Internal error: Lists not yet supported."
             return False
@@ -403,7 +413,7 @@ class CppWriter():
             if not self.WriteArgument(Arg):
                 return False
             self.OutputText += ")" * nParen + " & 15;\n"
-            self.OutputText += IndentText + "%s(tt_Colors[color%02i][0], tt_Colors[color%02i][1], tt_Colors[color%02i][2]);\n" % (CoreFunc, my_temp, my_temp, my_temp)
+            self.OutputText += IndentText + "*((int *)%s) = *((int *) tt_Colors[color%02i]);\n" % (DestColorArray, my_temp)
         return True
 
     def WriteBuiltinTurn(self, IndentText, Arg, Sign):
