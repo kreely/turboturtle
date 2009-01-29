@@ -151,8 +151,7 @@ class CppWriter():
         elif Var.Type == ParamType.NUMBER:
             self.OutputText += " = 0.0;\n"
         elif Var.Type == ParamType.LISTNUM:
-            print "Internal error: Lists not yet supported."
-            return None
+            self.OutputText += ";\n"
         elif Var.Type == ParamType.ARRAY:
             print "Internal error: Arrays not yet supported."
             return None
@@ -203,8 +202,8 @@ class CppWriter():
             self.OutputText += self.LogoState.NumType
             return True
         elif Type == ParamType.LISTNUM:
-            print "Internal error: Lists not yet supported."
-            return False
+            self.OutputText += "CList<%s>" % self.LogoState.NumType
+            return True
         elif Type == ParamType.ARRAY:
             print "Internal error: Arrays not yet supported."
             return False
@@ -222,17 +221,41 @@ class CppWriter():
         return True
 
     def GetCppArgument(self, Arg):
+        CppText = ""
         if Arg.ArgType == ParamType.QUOTEDWORD:
             return '"' + Arg.Elements[0].Text[1:] + '"'
         elif Arg.ArgType == ParamType.ARRAY:
             print "Internal error: Arrays not yet supported."
             return None
         elif Arg.ArgType == ParamType.LISTNUM:
-            print "Internal error: Lists not yet supported."
-            return None
+            if Arg.Elements[0].Type == ElemType.NUMBER:
+                CppText += "CList<%s>(" % self.LogoState.NumType
+                if len(Arg.Elements) <= 4:
+                    bFirst = True
+                    for elem in Arg.Elements:
+                        if bFirst == True:
+                            bFirst = False
+                        else:
+                            CppText += ", "
+                        CppText += elem.Text
+                else:
+                    CppText += "%i" % len(Arg.Elements)
+                    for elem in Arg.Elements:
+                        CppText += ", (double) %s" % elem.Text
+                CppText += ")"
+            elif Arg.Elements[0].Type == ElemType.VAR_VALUE:
+                CppText += Arg.Elements[0].pVariable.CppName
+            elif Arg.Elements[0].Type == ElemType.FUNC_CALL:
+                codetext = self.GetCppInstruction(Arg.Elements[0].pInstruct, 0, False)
+                if codetext is None:
+                    return None
+                CppText += codetext
+            else:
+                print "Internal error: invalid LISTNUM element '%s' in GetCppArgument()" % elem.Text
+                return None
+            return CppText
         elif Arg.ArgType in (ParamType.NUMBER, ParamType.BOOLEAN):
             lastelem = None
-            CppText = ""
             for elem in Arg.Elements:
                 if elem.Type in (ElemType.OPEN_PAREN, ElemType.CLOSE_PAREN, ElemType.NUMBER):
                     CppText += elem.Text
@@ -246,7 +269,7 @@ class CppWriter():
                     elif elem.Text == "<>":
                         CppText += " != "
                     else:
-                        print "Internal error: invalid INFIX_BOOL element '%s' in WriteArgument()" % elem.Text
+                        print "Internal error: invalid INFIX_BOOL element '%s' in GetCppArgument()" % elem.Text
                         return None
                 elif elem.Type == ElemType.INFIX_NUM:
                     if lastelem is not None and lastelem.Type == ElemType.INFIX_NUM and elem.Text == '-':
@@ -262,12 +285,12 @@ class CppWriter():
                         return None
                     CppText += codetext
                 else:
-                    print "Internal error: invalid element type %i '%s' in WriteArgument()" % (elem.Type, elem.Text)
+                    print "Internal error: invalid element type %i '%s' in GetCppArgument()" % (elem.Type, elem.Text)
                     return None
                 lastelem = elem
             return CppText
         else:
-            print "Internal error: invalid argument type %i in WriteArgument()" % Arg.ArgType
+            print "Internal error: invalid argument type %i in GetCppArgument()" % Arg.ArgType
             return None
         return None # should never reach this point
 
@@ -306,6 +329,10 @@ class CppWriter():
             return ""
         elif pInstruct.pProc.FullName == "back":                            # BACK
             return self.GetCppBuiltinMove(IndentText, pInstruct.Arguments[0], "-")
+        elif pInstruct.pProc.FullName == "butfirst":                        # BUTFIRST
+            CppText += "%s.ButFirst()" % ArgText[0]
+        elif pInstruct.pProc.FullName == "butlast":                         # BUTLAST
+            CppText += "%s.ButLast()" % ArgText[0]
         elif pInstruct.pProc.FullName == "clean":                           # CLEAN
             CppText += IndentText + "wrapper_Clean();\n"
         elif pInstruct.pProc.FullName == "clearscreen":                     # CLEARSCREEN
@@ -313,6 +340,8 @@ class CppWriter():
             CppText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = 0.5;\n"
             CppText += IndentText + "tt_TurtleDir = 0.0;\n"
             CppText += IndentText + "wrapper_Clean();\n"
+        elif pInstruct.pProc.FullName == "count":                           # COUNT
+            CppText += "%s.Length()" % ArgText[0]
         elif pInstruct.pProc.FullName in ("do.while", "do.until"):          # DO.WHILE, DO.UNTIL
             CppText += IndentText + "do {\n"
             for instruct in pInstruct.Arguments[0].Elements[0].pInstruct:
@@ -324,6 +353,10 @@ class CppWriter():
                 CppText += IndentText + "} while (%s);\n" % ArgText[1]
             else:
                 CppText += IndentText + "} while (!(%s));\n" % ArgText[1]
+        elif pInstruct.pProc.FullName == "emptyp":                          # EMPTYP
+            CppText += "%s.Length() == 0" % ArgText[0]
+        elif pInstruct.pProc.FullName == "first":                           # FIRST
+            CppText += "%s[0]" % ArgText[0]
         elif pInstruct.pProc.FullName == "for":                             # FOR
             my_temp = self.LogoState.TempIdx
             self.LogoState.TempIdx += 1
@@ -361,11 +394,13 @@ class CppWriter():
             self.LogoState.InnerLoopIdx = -1
         elif pInstruct.pProc.FullName == "forward":                         # FORWARD
             return self.GetCppBuiltinMove(IndentText, pInstruct.Arguments[0], "+")
+        elif pInstruct.pProc.FullName == "fput":                            # FPUT
+            CppText += "CList<%s>(%s, %s)" % (self.LogoState.NumType, ArgText[0], ArgText[1])
+        elif pInstruct.pProc.FullName == "goto":                            # GOTO
+            CppText += IndentText + "goto tag_%s;\n" % ArgText[0][1:-1]
         elif pInstruct.pProc.FullName == "home":                            # HOME
             CppText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = 0.5;\n"
             CppText += IndentText + "tt_TurtleDir = 0.0;\n"
-        elif pInstruct.pProc.FullName == "goto":                            # GOTO
-            CppText += IndentText + "goto tag_%s;\n" % ArgText[0][1:-1]
         elif pInstruct.pProc.FullName in ("if", "ifelse"):                  # IF, IFELSE
             CppText += IndentText + "if (%s)\n" % ArgText[0] + IndentText + "{\n"
             for instruct in pInstruct.Arguments[1].Elements[0].pInstruct:
@@ -394,10 +429,28 @@ class CppWriter():
                     return None
                 CppText += codetext
             CppText += IndentText + "}\n"
+        elif pInstruct.pProc.FullName == "item":                            # ITEM
+            CppText += "%s[(int) %s]" % (ArgText[1], ArgText[0])
+        elif pInstruct.pProc.FullName == "last":                            # LAST
+            CppText += "%s.Last()" % ArgText[0]
         elif pInstruct.pProc.FullName == "left":                            # LEFT
             return self.GetCppBuiltinTurn(IndentText, pInstruct.Arguments[0], "-")
+        elif pInstruct.pProc.FullName == "list":                            # LIST
+            CppText += "CList<%s>(" % self.LogoState.NumType
+            if len(pInstruct.Arguments) <= 4:
+                for i in range(len(pInstruct.Arguments)):
+                    if i != 0:
+                        CppText += ", "
+                    CppText += ArgText[i]
+            else:
+                CppText += "%i" % len(pInstruct.Arguments)
+                for i in range(len(pInstruct.Arguments)):
+                    CppText += ", (double) %s" % ArgText[i]
+            CppText += ")"
         elif pInstruct.pProc.FullName in ("localmake", "make"):             # LOCALMAKE, MAKE
             CppText += IndentText + pInstruct.pMakeVar.CppName + " = " + ArgText[1] + ";\n"
+        elif pInstruct.pProc.FullName == "lput":                            # FPUT
+            CppText += "CList<%s>(%s, %s)" % (self.LogoState.NumType, ArgText[1], ArgText[0])
         elif pInstruct.pProc.FullName == "minus":                           # MINUS
             CppText += "-" + ArgText[0]
         elif pInstruct.pProc.FullName == "output":                          # OUTPUT
@@ -435,6 +488,8 @@ class CppWriter():
                 CppText += codetext
             CppText += IndentText + "}\n"
             self.LogoState.InnerLoopIdx = -1
+        elif pInstruct.pProc.FullName == "reverse":                         # REVERSE
+            CppText += "%s.Reverse()" % ArgText[0]
         elif pInstruct.pProc.FullName == "right":                           # RIGHT
             return self.GetCppBuiltinTurn(IndentText, pInstruct.Arguments[0], "+")
         elif pInstruct.pProc.FullName == "setbackground":                   # SETBACKGROUND

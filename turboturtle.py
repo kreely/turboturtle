@@ -478,6 +478,13 @@ class TT_App:
                             argsmatch = False
                     if not argsmatch:
                         continue
+                    # if this is a parenthesized, extra-argument instruction, make sure that all extra args have the same type as the last arg
+                    if proc.bParenthesized and proc.bExtraArgs:
+                        lastargtype = proc.ParamTypes[proc.nParams-1]
+                        for i in range(proc.nParams, pInstruct.nParams):
+                            if pInstruct.Arguments[i].ArgType != lastargtype:
+                                print "Syntax error: parenthesized instruction '%s' requires all extra arguments to be type '%s'" % (pInstruct.Name, ParamType.Names[lastargtype])
+                                return None
                     # we found a match!
                     pInstruct.pProc = proc
                     nFixups += 1

@@ -93,7 +93,7 @@ class CList
       this->aInternal[2] = num3;
       this->aInternal[3] = num4;
     }
-    CList(int iSize, T num1, T num2, T num3, T num4, ...)
+    CList(int iSize, double num1, double num2, double num3, double num4, ...)
     {
       va_list arguments;
       
@@ -101,13 +101,13 @@ class CList
       if (iSize <= INTERNAL_SIZE)
       {
         this->pExternal = NULL;
-        this->aInternal[0] = num1;
-        this->aInternal[1] = num2;
-        this->aInternal[2] = num3;
-        this->aInternal[3] = num4;
+        this->aInternal[0] = (T) num1;
+        this->aInternal[1] = (T) num2;
+        this->aInternal[2] = (T) num3;
+        this->aInternal[3] = (T) num4;
         va_start(arguments, num4);
         for (int i = 4; i < iSize; i++)
-          this->aInternal[i] = va_arg(arguments, T);
+          this->aInternal[i] = (T) va_arg(arguments, double);
         va_end(arguments);
       }
       else
@@ -119,7 +119,7 @@ class CList
         this->pExternal[3] = num4;
         va_start(arguments, num4);
         for (int i = 4; i < iSize; i++)
-          this->pExternal[i] = va_arg(arguments, T);
+          this->pExternal[i] = (T) va_arg(arguments, double);
         va_end(arguments);
       }
     }
@@ -171,6 +171,8 @@ class CList
     CList<T> ButFirst(void) const
     {
       CList<T> local;
+      if (this->iListSize < 1)
+        return local;
       if (this->iListSize - 1 <= INTERNAL_SIZE)
       {
         local.iListSize = this->iListSize - 1;
@@ -192,6 +194,8 @@ class CList
     CList<T> ButLast(void) const
     {
       CList<T> local;
+      if (this->iListSize < 1)
+        return local;
       if (this->iListSize - 1 <= INTERNAL_SIZE)
       {
         local.iListSize = this->iListSize - 1;

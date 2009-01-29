@@ -66,6 +66,7 @@ class Argument:
                     procs = [ proc for proc in Builtin._procs if proc.bParenthesized and (proc.FullName == name.lower() or proc.AbbrevName == name.lower()) ]
                     if len(procs) > 0:
                         # okay, we're looking at a special instruction form
+                        CodeElements.pop(0) # pop the instruction name itself
                         # first, extract a code element stream for only this instruction
                         InstrElements = []
                         InstrParen = 1
@@ -209,6 +210,7 @@ class Argument:
             if bNumericExpression is True and valtype != ParamType.NUMBER:
                 print "Syntax error: non-numeric value (type '%s') inside a numeric expression" % ParamType.Names[valtype]
                 return None
+            # fixme there's no way to tell the difference between "sum 1 2 + 3" and "sum 1 2+3" when parsing
             if valtype != ParamType.NUMBER and valtype != ParamType.BOOLEAN and len(ElemList) > 0:
                 clausetext = " ".join([elem.Text for elem in ElemList])
                 print "Syntax error: extraneous clause '%s' following non-numeric and non-boolean value (type '%s') in expression" % (clausetext, ParamType.Names[valtype])
