@@ -23,6 +23,7 @@ CppHead = """
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include "wrapper_api.h"
+#include "wrapper_clist.h"
 
 """
 
