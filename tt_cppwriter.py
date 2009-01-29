@@ -20,6 +20,7 @@ CppHead = """
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <SDL.h>
 #include <SDL_opengl.h>
 #include "wrapper_api.h"
 
@@ -87,10 +88,13 @@ class CppWriter():
         # start by writing the special TurboTurtle variables
         self.OutputText += "static const %s tt_DegreeRad = 180.0 / 3.141592653589793;\n" % self.LogoState.NumType
         self.OutputText += "static const %s tt_RadDegree = 3.141592653589793 / 180.0;\n" % self.LogoState.NumType
-        self.OutputText += "%s tt_TurtlePos[2] = {0.0, 0.0};\n" % self.LogoState.NumType
+        # the home position is 0.5,0.5 because this is in the middle of the pixel
+        # if we use 0,0 here the round-off errors of 'float's will cause artifacts
+        self.OutputText += "%s tt_TurtlePos[2] = {0.5, 0.5};\n" % self.LogoState.NumType
         self.OutputText += "%s tt_TurtleDir = 0.0;\n" % self.LogoState.NumType
         self.OutputText += "bool tt_PenDown = true;\n"
         self.OutputText += "bool tt_PenPaint = true;\n"
+        self.OutputText += "bool tt_TestValue = false;\n"
         self.OutputText += "int tt_WindowSize = %i;\n" % self.LogoState.iWindowSize
         self.OutputText += "unsigned char tt_ColorPen[4] = {255,255,255,0};\n"
         self.OutputText += "unsigned char tt_ColorBackground[4] = {0,0,0,0};\n"
@@ -229,8 +233,10 @@ class CppWriter():
             lastelem = None
             CppText = ""
             for elem in Arg.Elements:
-                if elem.Type in (ElemType.OPEN_PAREN, ElemType.CLOSE_PAREN, ElemType.NUMBER, ElemType.BOOLEAN):
+                if elem.Type in (ElemType.OPEN_PAREN, ElemType.CLOSE_PAREN, ElemType.NUMBER):
                     CppText += elem.Text
+                elif elem.Type == ElemType.BOOLEAN:
+                    CppText += elem.Text.lower()
                 elif elem.Type == ElemType.INFIX_BOOL:
                     if elem.Text in ("<", ">", "<=", ">="):
                         CppText += " " + elem.Text + " "
@@ -303,8 +309,20 @@ class CppWriter():
             CppText += IndentText + "wrapper_Clean();\n"
         elif pInstruct.pProc.FullName == "clearscreen":                     # CLEARSCREEN
             # just move to HOME position and call clean
-            CppText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = tt_TurtleDir = 0.0;\n"
+            CppText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = 0.5;\n"
+            CppText += IndentText + "tt_TurtleDir = 0.0;\n"
             CppText += IndentText + "wrapper_Clean();\n"
+        elif pInstruct.pProc.FullName in ("do.while", "do.until"):          # DO.WHILE, DO.UNTIL
+            CppText += IndentText + "do {\n"
+            for instruct in pInstruct.Arguments[0].Elements[0].pInstruct:
+                codetext = self.GetCppInstruction(instruct, iIndent + 1, True)
+                if codetext is None:
+                    return None
+                CppText += codetext
+            if pInstruct.pProc.FullName == "do.while":
+                CppText += IndentText + "} while (%s);\n" % ArgText[1]
+            else:
+                CppText += IndentText + "} while (!(%s));\n" % ArgText[1]
         elif pInstruct.pProc.FullName == "for":                             # FOR
             my_temp = self.LogoState.TempIdx
             self.LogoState.TempIdx += 1
@@ -343,10 +361,33 @@ class CppWriter():
         elif pInstruct.pProc.FullName == "forward":                         # FORWARD
             return self.GetCppBuiltinMove(IndentText, pInstruct.Arguments[0], "+")
         elif pInstruct.pProc.FullName == "home":                            # HOME
-            CppText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = tt_TurtleDir = 0.0;\n"
-        elif pInstruct.pProc.FullName == "if":                              # IF
+            CppText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = 0.5;\n"
+            CppText += IndentText + "tt_TurtleDir = 0.0;\n"
+        elif pInstruct.pProc.FullName == "goto":                            # GOTO
+            CppText += IndentText + "goto tag_%s;\n" % ArgText[0][1:-1]
+        elif pInstruct.pProc.FullName in ("if", "ifelse"):                  # IF, IFELSE
             CppText += IndentText + "if (%s)\n" % ArgText[0] + IndentText + "{\n"
             for instruct in pInstruct.Arguments[1].Elements[0].pInstruct:
+                codetext = self.GetCppInstruction(instruct, iIndent + 1, True)
+                if codetext is None:
+                    return None
+                CppText += codetext
+            if pInstruct.pProc.FullName == "if":
+                CppText += IndentText + "}\n"
+            else:
+                CppText += IndentText + "} else {\n"
+                for instruct in pInstruct.Arguments[2].Elements[0].pInstruct:
+                    codetext = self.GetCppInstruction(instruct, iIndent + 1, True)
+                    if codetext is None:
+                        return None
+                    CppText += codetext
+                CppText += IndentText + "}\n"
+        elif pInstruct.pProc.FullName in ("iftrue", "iffalse"):             # IFTRUE, IFFALSE
+            if pInstruct.pProc.FullName == "iftrue":
+                CppText += IndentText + "if (tt_TestValue)\n" + IndentText + "{\n"
+            else:
+                CppText += IndentText + "if (!tt_TestValue)\n" + IndentText + "{\n"
+            for instruct in pInstruct.Arguments[0].Elements[0].pInstruct:
                 codetext = self.GetCppInstruction(instruct, iIndent + 1, True)
                 if codetext is None:
                     return None
@@ -446,6 +487,23 @@ class CppWriter():
             CppText += IndentText + "}\n"
         elif pInstruct.pProc.FullName == "stop":                            # STOP
             CppText += IndentText + "return;\n"
+        elif pInstruct.pProc.FullName == "tag":                             # TAG
+            CppText += "tag_%s:\n" % ArgText[0][1:-1]
+        elif pInstruct.pProc.FullName == "test":                            # TEST
+            CppText += IndentText + "tt_TestValue = (bool) (%s);\n" % ArgText[0]
+        elif pInstruct.pProc.FullName == "wait":                            # WAIT
+            CppText += IndentText + "SDL_Delay((int) ((%s) * 1000 / 60));\n" % ArgText[0]
+        elif pInstruct.pProc.FullName in ("while", "until"):                # WHILE, UNTIL
+            if pInstruct.pProc.FullName == "while":
+                CppText += IndentText + "while (%s) {\n" % ArgText[0]
+            else:
+                CppText += IndentText + "while (!(%s)) {\n" % ArgText[0]
+            for instruct in pInstruct.Arguments[1].Elements[0].pInstruct:
+                codetext = self.GetCppInstruction(instruct, iIndent + 1, True)
+                if codetext is None:
+                    return None
+                CppText += codetext
+            CppText += IndentText + "}\n"
         elif pInstruct.pProc.FullName == "window":                          # WINDOW
             CppText += IndentText + "tt_UseWrap = false;\n"
         elif pInstruct.pProc.FullName == "wrap":                            # WRAP
