@@ -40,7 +40,7 @@ class Argument:
                         break
                 self.Elements.append(Element(elem[0], elem[1]))
                 for ch in elem[1]:
-                    if ch not in '0123456789.':
+                    if ch not in '0123456789.-':
                         self.ArgType = ParamType.LISTCODE
             # check bracket pairing
             if bracketDepth != 0:
