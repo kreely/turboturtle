@@ -1,6 +1,8 @@
 ; Hilbert, from: http://www.s193653721.websitehome.co.uk/logoarts/progs/fractals/hilbert.html
 
 .setspecial "windowsize 400
+
+make "colors [7 4 2 6 1]
 GoX
 
 To Init :Level
@@ -26,7 +28,7 @@ End
 
 To GoX
   For [Level 0 4]
-  [SetPC :Level+1 SetPenSize 5-:Level
+  [SetPC item :Level :colors SetPenSize 6-:Level
   Init :Level Hilbert :Level 1]
 End
 
