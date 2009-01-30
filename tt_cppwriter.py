@@ -571,8 +571,35 @@ class CppWriter():
 
     def GetCppBuiltinSetColor(self, IndentText, Arg, DestColorArray):
         if Arg.ArgType == ParamType.LISTNUM:
-            print "Internal error: Lists not yet supported."
-            return None
+            CppText = ""
+            elem0type = Arg.Elements[0].Type
+            if elem0type == ElemType.NUMBER:
+                if len(Arg.Elements) != 3:
+                    print "Syntax error: SETPC/SETBG instruction takes an immediate list with exactly 3 numbers, but %i were given." % len(Arg.Elements)
+                    return None
+                for i in range(3):
+                    color = int(Arg.Elements[i].Text)
+                    if color < 0 or color > 255:
+                        print "Syntax error: invalid color component value %i in SETPC/SETBG instruction" % color
+                        return None
+                    CppText += IndentText + "%s[%i] = %i;\n" % (DestColorArray, i, color)
+            elif elem0type == ElemType.VAR_VALUE:
+                CppText += IndentText + "%s[0] = (unsigned char) %s[0];\n" % (DestColorArray, Arg.Elements[0].pVariable.CppName)
+                CppText += IndentText + "%s[1] = (unsigned char) %s[1];\n" % (DestColorArray, Arg.Elements[0].pVariable.CppName)
+                CppText += IndentText + "%s[2] = (unsigned char) %s[2];\n" % (DestColorArray, Arg.Elements[0].pVariable.CppName)
+            elif elem0type == ElemType.FUNC_CALL:
+                my_temp = self.LogoState.TempIdx
+                self.LogoState.TempIdx += 1
+                codetext = self.GetCppInstruction(Arg.Elements[0].pInstruct, 0, False)
+                if codetext is None:
+                    return None
+                CppText += IndentText + "CList<%s> templist%02i = %s;\n" % (self.LogoState.NumType, my_temp, codetext)
+                CppText += IndentText + "%s[0] = (unsigned char) templist%02i[0];\n" % (DestColorArray, my_temp)
+                CppText += IndentText + "%s[1] = (unsigned char) templist%02i[1];\n" % (DestColorArray, my_temp)
+                CppText += IndentText + "%s[2] = (unsigned char) templist%02i[2];\n" % (DestColorArray, my_temp)
+            else:
+                print "Internal error: invalid element type %i '%s' in a List argument." % (elem0type, ElemType.Names[elem0type])
+                return None
         else: # must be ParamType.NUMBER
             ArgText = self.GetCppArgument(Arg)
             if ArgText is None:
