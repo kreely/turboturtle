@@ -373,6 +373,11 @@ class CppWriter():
                 CppText += IndentText + "} while (!(%s));\n" % ArgText[1]
         elif pInstruct.pProc.FullName == "emptyp":                          # EMPTYP
             CppText += "%s.Length() == 0" % ArgText[0]
+        elif pInstruct.pProc.FullName == "exp":                             # EXP
+            if self.LogoState.NumType == 'float':
+                CppText += "expf(%s)" % ArgText[0]
+            else:
+                CppText += "exp(%s)" % ArgText[0]
         elif pInstruct.pProc.FullName == "first":                           # FIRST
             CppText += "%s[0]" % ArgText[0]
         elif pInstruct.pProc.FullName == "for":                             # FOR
@@ -449,6 +454,8 @@ class CppWriter():
                     return None
                 CppText += codetext
             CppText += IndentText + "}\n"
+        elif pInstruct.pProc.FullName == "int":                             # INT
+            CppText += "(int) (%s)" % ArgText[0]
         elif pInstruct.pProc.FullName == "item":                            # ITEM
             CppText += "%s[(int) %s]" % (ArgText[1], ArgText[0])
         elif pInstruct.pProc.FullName == "last":                            # LAST
@@ -467,8 +474,18 @@ class CppWriter():
                 for i in range(len(pInstruct.Arguments)):
                     CppText += ", (double) %s" % ArgText[i]
             CppText += ")"
+        elif pInstruct.pProc.FullName == "ln":                              # LN
+            if self.LogoState.NumType == 'float':
+                CppText += "logf(%s)" % ArgText[0]
+            else:
+                CppText += "log(%s)" % ArgText[0]
         elif pInstruct.pProc.FullName in ("localmake", "make"):             # LOCALMAKE, MAKE
             CppText += IndentText + pInstruct.pMakeVar.CppName + " = " + ArgText[1] + ";\n"
+        elif pInstruct.pProc.FullName == "log10":                           # LOG10
+            if self.LogoState.NumType == 'float':
+                CppText += "log10f(%s)" % ArgText[0]
+            else:
+                CppText += "log10(%s)" % ArgText[0]
         elif pInstruct.pProc.FullName == "lput":                            # FPUT
             CppText += "CList<%s>(%s, %s)" % (self.LogoState.NumType, ArgText[1], ArgText[0])
         elif pInstruct.pProc.FullName == "minus":                           # MINUS
@@ -535,6 +552,11 @@ class CppWriter():
             CppText += "%s.Reverse()" % ArgText[0]
         elif pInstruct.pProc.FullName == "right":                           # RIGHT
             CppText += IndentText + "tt_TurtleDir += %s;\n" % ArgText[0]
+        elif pInstruct.pProc.FullName == "round":                           # ROUND
+            if self.LogoState.NumType == 'float':
+                CppText += "roundf(%s)" % ArgText[0]
+            else:
+                CppText += "round(%s)" % ArgText[0]
         elif pInstruct.pProc.FullName == "setbackground":                   # SETBACKGROUND
             codetext = self.GetCppBuiltinSetColor(IndentText, pInstruct.Arguments[0], "tt_ColorBackground")
             if codetext is None:
@@ -608,6 +630,11 @@ class CppWriter():
             CppText += IndentText + "}\n" + IndentText + "else\n" + IndentText + "{\n"
             CppText += NextIndent + "tt_TurtlePos[1] = %s;\n" % ArgText[0]
             CppText += IndentText + "}\n"
+        elif pInstruct.pProc.FullName == "sqrt":                            # SQRT
+            if self.LogoState.NumType == 'float':
+                CppText += "sqrtf(%s)" % ArgText[0]
+            else:
+                CppText += "sqrt(%s)" % ArgText[0]
         elif pInstruct.pProc.FullName == "stop":                            # STOP
             CppText += IndentText + "return;\n"
         elif pInstruct.pProc.FullName == "sum":                             # SUM
