@@ -1,7 +1,0 @@
-; this is an example logo file
-
-clearscreen
-
-PenUp Back 180 Right 90 Back 40 PenDown
-For [N 3 14] [Repeat :N [Forward 80 Left 360/:N] ]
-
