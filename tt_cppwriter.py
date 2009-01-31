@@ -407,7 +407,7 @@ class CppWriter():
         elif pInstruct.pProc.FullName == "goto":                            # GOTO
             CppText += IndentText + "goto tag_%s;\n" % ArgText[0][1:-1]
         elif pInstruct.pProc.FullName == "heading":                         # HEADING
-            CppText += "(tt_TurtleDir < 0.0 ? 360.0+fmod(tt_TurtleDir*tt_DegreeRad,360.0) : fmod(tt_TurtleDir*tt_DegreeRad,360.0))"
+            CppText += "(tt_TurtleDir < 0.0 ? 360.0+fmod(tt_TurtleDir,360.0) : fmod(tt_TurtleDir,360.0))"
         elif pInstruct.pProc.FullName == "home":                            # HOME
             CppText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = 0.5;\n"
             CppText += IndentText + "tt_TurtleDir = 0.0;\n"
@@ -444,7 +444,7 @@ class CppWriter():
         elif pInstruct.pProc.FullName == "last":                            # LAST
             CppText += "%s.Last()" % ArgText[0]
         elif pInstruct.pProc.FullName == "left":                            # LEFT
-            return self.GetCppBuiltinTurn(IndentText, pInstruct.Arguments[0], "-")
+            CppText += IndentText + "tt_TurtleDir -= %s;\n" % ArgText[0]
         elif pInstruct.pProc.FullName == "list":                            # LIST
             CppText += "CList<%s>(" % self.LogoState.NumType
             if len(pInstruct.Arguments) <= 4:
@@ -503,7 +503,7 @@ class CppWriter():
         elif pInstruct.pProc.FullName == "reverse":                         # REVERSE
             CppText += "%s.Reverse()" % ArgText[0]
         elif pInstruct.pProc.FullName == "right":                           # RIGHT
-            return self.GetCppBuiltinTurn(IndentText, pInstruct.Arguments[0], "+")
+            CppText += IndentText + "tt_TurtleDir += %s;\n" % ArgText[0]
         elif pInstruct.pProc.FullName == "setbackground":                   # SETBACKGROUND
             codetext = self.GetCppBuiltinSetColor(IndentText, pInstruct.Arguments[0], "tt_ColorBackground")
             if codetext is None:
@@ -523,7 +523,7 @@ class CppWriter():
             CppText += IndentText + "glLineWidth(%s);\n" % ArgText[0]
             CppText += IndentText + "glBegin(GL_LINES);\n"
         elif pInstruct.pProc.FullName == "setheading":                      # SETHEADING
-            CppText += IndentText + "tt_TurtleDir = (%s) * tt_RadDegree;\n" % ArgText[0]
+            CppText += IndentText + "tt_TurtleDir = %s;\n" % ArgText[0]
         elif pInstruct.pProc.FullName == "setpos":                          # SETPOS
             Arg = pInstruct.Arguments[0]
             elem0type = Arg.Elements[0].Type
@@ -667,15 +667,6 @@ class CppWriter():
             CppText = IndentText + "*((int *)%s) = *((int *) tt_Colors[(int) %s & 15]);\n" % (DestColorArray, ArgText)
         return CppText
 
-    def GetCppBuiltinTurn(self, IndentText, Arg, Sign):
-        ArgText = self.GetCppArgument(Arg)
-        if ArgText is None:
-            return None
-        if len(Arg.Elements) > 1:
-            ArgText = "(" + ArgText + ")"
-        CppText = IndentText + "tt_TurtleDir " + Sign + "= " + ArgText + " * tt_RadDegree;\n"
-        return CppText
-
     def GetCppBuiltinMove(self, IndentText, Arg, DirSign):
         NumTypeGL = self.LogoState.NumType[0]
         if NumTypeGL == "f":
@@ -694,11 +685,11 @@ class CppWriter():
         # write expression to calculate the new X position
         if self.LogoState.bUseScrunch:
             ScrunchText = " * tt_ScrunchXY[0]"
-        NewXText = "tt_TurtlePos[0] %s sin%s(tt_TurtleDir) * %s%s;\n" % (DirSign, NumTypeMath, ArgText, ScrunchText)
+        NewXText = "tt_TurtlePos[0] %s sin%s(tt_TurtleDir*tt_RadDegree) * %s%s;\n" % (DirSign, NumTypeMath, ArgText, ScrunchText)
         # write expression to calculate the new Y position
         if self.LogoState.bUseScrunch:
             ScrunchText = " * tt_ScrunchXY[1]"
-        NewYText = "tt_TurtlePos[1] %s cos%s(tt_TurtleDir) * %s%s;\n" % (DirSign, NumTypeMath, ArgText, ScrunchText)
+        NewYText = "tt_TurtlePos[1] %s cos%s(tt_TurtleDir*tt_RadDegree) * %s%s;\n" % (DirSign, NumTypeMath, ArgText, ScrunchText)
         # write code to draw the line
         if self.LogoState.bUseWrap:
             CppText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
