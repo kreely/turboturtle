@@ -94,11 +94,11 @@ class CppWriter():
         self.OutputText += "static const %s tt_RadDegree = 3.141592653589793 / 180.0;\n" % self.LogoState.NumType
         # the home position is 0.5,0.5 because this is in the middle of the pixel
         # if we use 0,0 here the round-off errors of 'float's will cause artifacts
-        self.OutputText += "%s tt_TurtlePos[2] = {0.5, 0.5};\n" % self.LogoState.NumType
-        self.OutputText += "%s tt_TurtleDir = 0.0;\n" % self.LogoState.NumType
-        self.OutputText += "bool tt_PenDown = true;\n"
-        self.OutputText += "bool tt_PenPaint = true;\n"
-        self.OutputText += "bool tt_TestValue = false;\n"
+        self.OutputText += "static %s tt_TurtlePos[2] = {0.5, 0.5};\n" % self.LogoState.NumType
+        self.OutputText += "static %s tt_TurtleDir = 0.0;\n" % self.LogoState.NumType
+        self.OutputText += "static bool tt_PenDown = true;\n"
+        self.OutputText += "static bool tt_PenPaint = true;\n"
+        self.OutputText += "static bool tt_TestValue = false;\n"
         self.OutputText += "int tt_WindowSize = %i;\n" % self.LogoState.iWindowSize
         self.OutputText += "unsigned char tt_ColorPen[4] = {255,255,255,0};\n"
         self.OutputText += "unsigned char tt_ColorBackground[4] = {0,0,0,0};\n"
