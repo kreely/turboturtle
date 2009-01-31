@@ -225,9 +225,6 @@ class Argument:
             infixelem = ElemList.pop(0)
             if infixelem.Type == ElemType.INFIX_BOOL:
                 # boolean is a special case: the remainder of the expression must evaluate to the same type as the valtype
-                if bNumericExpression is True:
-                    print "Syntax error: invalid boolean operator '%s' following a numeric value in an expression" % infixelem.Text
-                    return None
                 if len(ElemList) == 0:
                     print "Syntax error: hanging boolean operator '%s' in expression" % infixelem.Text
                     return None
