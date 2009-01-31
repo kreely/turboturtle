@@ -143,7 +143,7 @@ class Parser:
                 elif elemtext == ')':
                     Elements.append((ElemType.CLOSE_PAREN, elemtext))
                     continue
-                elif elemtext in '+-*/':
+                elif elemtext in '+*/' or (elemtext == '-' and CodeText[0] not in '0123456789'):
                     Elements.append((ElemType.INFIX_NUM, elemtext))
                     continue
                 elif elemtext in '<=>':
@@ -173,7 +173,7 @@ class Parser:
                 CodeText = CodeText[1:]
             if elemtype == ElemType.UNQUOT_WORD and bracketDepth == 0:
                 # check for numbers
-                if len([ch for ch in elemtext if ch not in '0123456789.']) == 0:
+                if elemtext[0] in '-0123456789' and len([ch for ch in elemtext[1:] if ch not in '0123456789.']) == 0:
                     elemtype = ElemType.NUMBER
                 # check for immediate booleans
                 elif elemtext.lower() == "true" or elemtext.lower() == "false":
