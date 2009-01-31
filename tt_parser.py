@@ -119,7 +119,12 @@ class Parser:
         ErrProcName = ProcName or 'global'
         Elements = []
         bracketDepth = 0
+        bFirst = True
         while len(CodeText) > 0:
+            bPriorSpace = False
+            if CodeText[0] == ' ' or bFirst:
+                bFirst = False
+                bPriorSpace = True
             CodeText = CodeText.strip()
             elemtext = CodeText[0]
             CodeText = CodeText[1:]
@@ -143,7 +148,7 @@ class Parser:
                 elif elemtext == ')':
                     Elements.append((ElemType.CLOSE_PAREN, elemtext))
                     continue
-                elif elemtext in '+*/' or (elemtext == '-' and CodeText[0] not in '0123456789'):
+                elif elemtext in '+*/' or (elemtext == '-' and (CodeText[0] not in '0123456789' or not bPriorSpace)):
                     Elements.append((ElemType.INFIX_NUM, elemtext))
                     continue
                 elif elemtext in '<=>':
