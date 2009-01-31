@@ -33,6 +33,8 @@ class Builtin:
         
 # full built-in procedure table
 Builtin.AddBuiltin(".setspecial",  None,    ParamType.NOTHING, False, False, ParamType.QUOTEDWORD, ParamType.NUMBER)
+Builtin.AddBuiltin("and",          None,    ParamType.BOOLEAN, False, False, ParamType.BOOLEAN,    ParamType.BOOLEAN)
+Builtin.AddBuiltin("and",          None,    ParamType.BOOLEAN, True,  True,  ParamType.BOOLEAN)
 Builtin.AddBuiltin("array",        None,    ParamType.ARRAY,   False, False, ParamType.NUMBER)
 Builtin.AddBuiltin("back",         "bk",    ParamType.NOTHING, False, False, ParamType.NUMBER)
 Builtin.AddBuiltin("butfirst",     None,    ParamType.LISTNUM, False, False, ParamType.LISTNUM)
@@ -66,6 +68,9 @@ Builtin.AddBuiltin("lput",         None,    ParamType.LISTNUM, False, False, Par
 Builtin.AddBuiltin("make",         None,    ParamType.NOTHING, False, False, ParamType.QUOTEDWORD, ParamType.ANYTHING)
 Builtin.AddBuiltin("mdarray",      None,    ParamType.ARRAY,   False, False, ParamType.LISTNUM)
 Builtin.AddBuiltin("minus",        None,    ParamType.NUMBER,  False, False, ParamType.NUMBER)
+Builtin.AddBuiltin("not",          None,    ParamType.BOOLEAN, False, False, ParamType.BOOLEAN)
+Builtin.AddBuiltin("or",           None,    ParamType.BOOLEAN, False, False, ParamType.BOOLEAN,    ParamType.BOOLEAN)
+Builtin.AddBuiltin("or",           None,    ParamType.BOOLEAN, True,  True,  ParamType.BOOLEAN)
 Builtin.AddBuiltin("output",       "op",    ParamType.NOTHING, False, False, ParamType.ANYTHING)
 Builtin.AddBuiltin("penup",        "pu",    ParamType.NOTHING, False, False)
 Builtin.AddBuiltin("pendown",      "pd",    ParamType.NOTHING, False, False)

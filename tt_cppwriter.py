@@ -335,6 +335,14 @@ class CppWriter():
         # now handle the particular instruction
         if pInstruct.pProc.FullName == ".setspecial":                       # .SETSPECIAL
             return ""
+        elif pInstruct.pProc.FullName == "and":                             # AND
+            bFirst = True
+            for argtext in ArgText:
+                if bFirst is True:
+                    bFirst = False
+                else:
+                    CppText += " && "
+                CppText += "(%s)" % argtext
         elif pInstruct.pProc.FullName == "back":                            # BACK
             return self.GetCppBuiltinMove(IndentText, pInstruct.Arguments[0], "-")
         elif pInstruct.pProc.FullName == "butfirst":                        # BUTFIRST
@@ -463,6 +471,16 @@ class CppWriter():
             CppText += "CList<%s>(%s, %s)" % (self.LogoState.NumType, ArgText[1], ArgText[0])
         elif pInstruct.pProc.FullName == "minus":                           # MINUS
             CppText += "-" + ArgText[0]
+        elif pInstruct.pProc.FullName == "not":                             # NOT
+            CppText += "!(%s)" % ArgText[0]
+        elif pInstruct.pProc.FullName == "or":                              # OR
+            bFirst = True
+            for argtext in ArgText:
+                if bFirst is True:
+                    bFirst = False
+                else:
+                    CppText += " || "
+                CppText += "(%s)" % argtext
         elif pInstruct.pProc.FullName == "output":                          # OUTPUT
             CppText += IndentText + "return %s;\n" % ArgText[0]
         elif pInstruct.pProc.FullName == "penup":                           # PENUP
