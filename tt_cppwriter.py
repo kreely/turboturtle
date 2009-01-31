@@ -358,6 +358,8 @@ class CppWriter():
             CppText += IndentText + "wrapper_Clean();\n"
         elif pInstruct.pProc.FullName == "count":                           # COUNT
             CppText += "%s.Length()" % ArgText[0]
+        elif pInstruct.pProc.FullName == "difference":                      # DIFFERENCE
+            CppText += "(%s) - (%s)" % (ArgText[0], ArgText[1])
         elif pInstruct.pProc.FullName in ("do.while", "do.until"):          # DO.WHILE, DO.UNTIL
             CppText += IndentText + "do {\n"
             for instruct in pInstruct.Arguments[0].Elements[0].pInstruct:
@@ -470,7 +472,7 @@ class CppWriter():
         elif pInstruct.pProc.FullName == "lput":                            # FPUT
             CppText += "CList<%s>(%s, %s)" % (self.LogoState.NumType, ArgText[1], ArgText[0])
         elif pInstruct.pProc.FullName == "minus":                           # MINUS
-            CppText += "-" + ArgText[0]
+            CppText += "-(%s)" % ArgText[0]
         elif pInstruct.pProc.FullName == "not":                             # NOT
             CppText += "!(%s)" % ArgText[0]
         elif pInstruct.pProc.FullName == "or":                              # OR
@@ -500,6 +502,17 @@ class CppWriter():
                 CppText += "powf(%s, %s)" % (ArgText[0], ArgText[1])
             else:
                 CppText += "pow(%s, %s)" % (ArgText[0], ArgText[1])
+        elif pInstruct.pProc.FullName == "product":                         # PRODUCT
+            CppText += "(%s)" % ArgText[0]
+            for argtext in ArgText[1:]:
+                CppText += " * (%s)" % argtext
+        elif pInstruct.pProc.FullName == "quotient":                        # QUOTIENT
+            if len(ArgText) == 1:
+                CppText += "1.0 / (%s)" % ArgText[0]
+            else:
+                CppText += "(%s) / (%s)" % (ArgText[0], ArgText[1])
+        elif pInstruct.pProc.FullName == "remainder":                       # REMAINDER
+            CppText += "(int) (%s) %% (int) (%s)" % (ArgText[0], ArgText[1])
         elif pInstruct.pProc.FullName == "repcount":                        # REPCOUNT
             if self.LogoState.InnerLoopIdx == -1:
                 print "Syntax error: REPCOUNT instruction used outside of a FOREVER or REPEAT loop"
@@ -597,6 +610,10 @@ class CppWriter():
             CppText += IndentText + "}\n"
         elif pInstruct.pProc.FullName == "stop":                            # STOP
             CppText += IndentText + "return;\n"
+        elif pInstruct.pProc.FullName == "sum":                             # SUM
+            CppText += "(%s)" % ArgText[0]
+            for argtext in ArgText[1:]:
+                CppText += " + (%s)" % argtext
         elif pInstruct.pProc.FullName == "tag":                             # TAG
             CppText += "tag_%s:\n" % ArgText[0][1:-1]
         elif pInstruct.pProc.FullName == "test":                            # TEST
@@ -682,7 +699,7 @@ class CppWriter():
                 return None
             if len(Arg.Elements) > 1:
                 ArgText = "(" + ArgText + ")"
-            CppText = IndentText + "*((int *)%s) = *((int *) tt_Colors[(int) %s & 15]);\n" % (DestColorArray, ArgText)
+            CppText = IndentText + "*((int *)%s) = *((int *) tt_Colors[(int) (%s) & 15]);\n" % (DestColorArray, ArgText)
         return CppText
 
     def GetCppBuiltinMove(self, IndentText, Arg, DirSign):
