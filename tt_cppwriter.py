@@ -56,6 +56,7 @@ class CppWriter():
         self.LogoState.bUseScrunch = False
         self.LogoState.bUseWrap = False
         self.LogoState.bNeedColors = False
+        self.LogoState.bNeedTowardsFunc = False
         self.LogoState.NumType = 'float'
         self.LogoState.TempIdx = 0
         self.LogoState.LoopIdx = 0          # each REPEAT or FOREVER instruction gets its own local counter variable
@@ -82,6 +83,8 @@ class CppWriter():
             self.LogoState.bUseScrunch = True
         elif pInstruct.Name.lower() in ('wrap', 'window'):
             self.LogoState.bUseWrap = True
+        elif pInstruct.Name.lower() == 'towards' and pInstruct.Arguments[0].Elements[0].Type != ElemType.NUMBER:
+            self.LogoState.bNeedTowardsFunc = True
         return True
 
     # Write out the global variables for the CPP code
@@ -105,16 +108,21 @@ class CppWriter():
             self.OutputText += "%s tt_ScrunchXY[2] = {1.0, 1.0};\n" % self.LogoState.NumType
         if self.LogoState.bUseWrap:
             self.OutputText += "bool tt_UseWrap = false;\n"
-        # then write out C++ definitions for the Logo program's global variables
         self.OutputText += "\n"
+        # then write out definitions for static functions which might be used by the logo code
+        if self.LogoState.bNeedTowardsFunc:
+            self.OutputText += "static %s tt_Towards(const CList<%s> &list)\n{\n" % (self.LogoState.NumType, self.LogoState.NumType)
+            self.OutputText += " " * self.IndentSize
+            self.OutputText += "return atan2(list[0] - tt_TurtlePos[0], list[1] - tt_TurtlePos[1]) * tt_DegreeRad;\n}\n\n"
+        # finally, generate a string of C++ definitions for the Logo program's global variables
         InitCode = ""
         for var in GlobalVariables:
             Code = self.WriteVariableDefinition(var, 0)
             if Code is None:
                 return None
             InitCode += Code
-        if len(GlobalVariables) > 0:
-            self.OutputText += "\n"
+        if len(InitCode) > 0:
+            InitCode += "\n"
         return InitCode
 
     # Write out a function prototypes
@@ -398,6 +406,8 @@ class CppWriter():
             CppText += "CList<%s>(%s, %s)" % (self.LogoState.NumType, ArgText[0], ArgText[1])
         elif pInstruct.pProc.FullName == "goto":                            # GOTO
             CppText += IndentText + "goto tag_%s;\n" % ArgText[0][1:-1]
+        elif pInstruct.pProc.FullName == "heading":                         # HEADING
+            CppText += "(tt_TurtleDir < 0.0 ? 360.0+fmod(tt_TurtleDir*tt_DegreeRad,360.0) : fmod(tt_TurtleDir*tt_DegreeRad,360.0))"
         elif pInstruct.pProc.FullName == "home":                            # HOME
             CppText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = 0.5;\n"
             CppText += IndentText + "tt_TurtleDir = 0.0;\n"
@@ -465,6 +475,8 @@ class CppWriter():
         elif pInstruct.pProc.FullName == "penpaint":                        # PENPAINT
             CppText += IndentText + "tt_PenPaint = true;\n"
             CppText += IndentText + "glColor3ubv(tt_ColorPen);\n"
+        elif pInstruct.pProc.FullName == "pos":                             # POS
+            CppText += "CList<%s>(tt_TurtlePos[0], tt_TurtlePos[1])" % self.LogoState.NumType
         elif pInstruct.pProc.FullName == "power":                           # POWER
             if self.LogoState.NumType == 'float':
                 CppText += "powf(%s, %s)" % (ArgText[0], ArgText[1])
@@ -512,6 +524,30 @@ class CppWriter():
             CppText += IndentText + "glBegin(GL_LINES);\n"
         elif pInstruct.pProc.FullName == "setheading":                      # SETHEADING
             CppText += IndentText + "tt_TurtleDir = (%s) * tt_RadDegree;\n" % ArgText[0]
+        elif pInstruct.pProc.FullName == "setpos":                          # SETPOS
+            Arg = pInstruct.Arguments[0]
+            elem0type = Arg.Elements[0].Type
+            if elem0type == ElemType.NUMBER:
+                if len(Arg.Elements) != 2:
+                    print "Syntax error: SETPOS instruction takes an immediate list with exactly 2 numbers, but %i were given." % len(Arg.Elements)
+                    return None
+                for i in range(2):
+                    CppText += IndentText + "tt_TurtlePos[%i] = %s;\n" % (i, Arg.Elements[i].Text)
+            elif elem0type == ElemType.VAR_VALUE:
+                CppText += IndentText + "tt_TurtlePos[0] = %s[0];\n" % (Arg.Elements[0].pVariable.CppName)
+                CppText += IndentText + "tt_TurtlePos[1] = %s[1];\n" % (Arg.Elements[0].pVariable.CppName)
+            elif elem0type == ElemType.FUNC_CALL:
+                my_temp = self.LogoState.TempIdx
+                self.LogoState.TempIdx += 1
+                codetext = self.GetCppInstruction(Arg.Elements[0].pInstruct, 0, False)
+                if codetext is None:
+                    return None
+                CppText += IndentText + "CList<%s> templist%02i = %s;\n" % (self.LogoState.NumType, my_temp, codetext)
+                CppText += IndentText + "tt_TurtlePos[0] = templist%02i[0];\n" % my_temp
+                CppText += IndentText + "tt_TurtlePos[1] = templist%02i[1];\n" % my_temp
+            else:
+                print "Internal error: invalid element type %i '%s' in a List argument for SETPOS." % (elem0type, ElemType.Names[elem0type])
+                return None
         elif pInstruct.pProc.FullName == "setscrunch":                      # SETSCRUNCH
             CppText += IndentText + "tt_ScrunchXY[0] = %s;\n" % ArgText[0]
             CppText += IndentText + "tt_ScrunchXY[1] = %s;\n" % ArgText[1]
@@ -547,6 +583,24 @@ class CppWriter():
             CppText += "tag_%s:\n" % ArgText[0][1:-1]
         elif pInstruct.pProc.FullName == "test":                            # TEST
             CppText += IndentText + "tt_TestValue = (bool) (%s);\n" % ArgText[0]
+        elif pInstruct.pProc.FullName == "towards":                         # TOWARDS
+            Arg = pInstruct.Arguments[0]
+            elem0type = Arg.Elements[0].Type
+            if elem0type == ElemType.NUMBER:
+                if len(Arg.Elements) != 2:
+                    print "Syntax error: TOWARDS instruction takes an immediate list with exactly 2 numbers, but %i were given." % len(Arg.Elements)
+                    return None
+                CppText += "(atan2(%s - tt_TurtlePos[0], %s - tt_TurtlePos[1])*tt_DegreeRad)" % (Arg.Elements[0].Text, Arg.Elements[1].Text)
+            elif elem0type == ElemType.VAR_VALUE:
+                CppText += "tt_Towards(%s)" % Arg.Elements[0].pVariable.CppName
+            elif elem0type == ElemType.FUNC_CALL:
+                codetext = self.GetCppInstruction(Arg.Elements[0].pInstruct, 0, False)
+                if codetext is None:
+                    return None
+                CppText += "tt_Towards(%s)" % codetext
+            else:
+                print "Internal error: invalid element type %i '%s' in a List argument for TOWARDS." % (elem0type, ElemType.Names[elem0type])
+                return None
         elif pInstruct.pProc.FullName == "wait":                            # WAIT
             CppText += IndentText + "SDL_Delay((int) ((%s) * 1000 / 60));\n" % ArgText[0]
         elif pInstruct.pProc.FullName in ("while", "until"):                # WHILE, UNTIL
@@ -564,6 +618,10 @@ class CppWriter():
             CppText += IndentText + "tt_UseWrap = false;\n"
         elif pInstruct.pProc.FullName == "wrap":                            # WRAP
             CppText += IndentText + "tt_UseWrap = true;\n"
+        elif pInstruct.pProc.FullName == "xcor":                            # XCOR
+            CppText += "tt_TurtlePos[0]"
+        elif pInstruct.pProc.FullName == "ycor":                            # YCOR
+            CppText += "tt_TurtlePos[1]"
         else:
             print "Internal error: built-in instruction named '%s' is not implemented" % pInstruct.Name
             return None

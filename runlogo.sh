@@ -23,5 +23,5 @@ if [ $? != 0 ]; then exit 4; fi
 
 exename=$basename
 echo "Linking wrapper code with $objname to produce executable."
-g++ -o $exename -lSDL -lGL $objname wrapper.o
+g++ -o $exename -lSDL -lGL -lm $objname wrapper.o
 
