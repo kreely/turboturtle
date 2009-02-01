@@ -236,12 +236,12 @@ class CList
     // function for indexing operator, for FIRST and ITEM instructions
     T operator[](int index) const
     {
-      if (index < 0 || index >= this->iListSize)
+      if (index < 1 || index > this->iListSize)
         return 0;
       if (this->pExternal == NULL)
-        return this->aInternal[index];
+        return this->aInternal[index-1];
       else
-        return this->pExternal[index];
+        return this->pExternal[index-1];
     }
     
     // function for LAST instruction
