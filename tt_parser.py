@@ -200,8 +200,38 @@ class Parser:
     @staticmethod
     def GetSingleInstruction(CodeElements, ProcName, Procedures):
         ErrProcName = ProcName or 'global'
-        # look for invalid characters
         firstelem = CodeElements.pop(0)
+        # first, handle parenthesized BuiltIn instructions
+        if firstelem[0] == ElemType.OPEN_PAREN:
+            if CodeElements[0][0] != ElemType.UNQUOT_WORD:
+                print "Syntax error in '%s': Invalid instruction starting with '(%s'" % (ErrProcName, CodeElements[0][1])
+                return None
+            name = CodeElements.pop(0)[1]
+            procs = [ proc for proc in Builtin._procs if proc.bParenthesized and (proc.FullName == name.lower() or proc.AbbrevName == name.lower()) ]
+            if len(procs) == 0:
+                print "Syntax error in '%s': Invalid parenthesized instruction '%s'" % (ErrProcName, name)
+                return None
+            # extract a code element stream for only this instruction
+            InstrElements = []
+            InstrParen = 1
+            while len(CodeElements) > 0:
+                elem = CodeElements.pop(0)
+                if elem[0] == ElemType.OPEN_PAREN:
+                    InstrParen += 1
+                elif elem[0] == ElemType.CLOSE_PAREN:
+                    InstrParen -= 1
+                    if InstrParen == 0:
+                        break
+                InstrElements.append(elem)
+            # now, create the special instruction and check that all elements were used
+            Instruct = Instruction(name, True, procs[0].nParams, True, procs[0].bExtraArgs)
+            if not Instruct.GetArguments(InstrElements, ProcName, Procedures):
+                return False
+            if len(InstrElements) > 0:
+                print "Syntax error: extraneous code in parenthesized instruction '%s' in procedure '%s'" % (name, ErrProcName)
+                return False
+            return Instruct
+        # otherwise it must be a normal (un-parenthesized) instruction
         if firstelem[0] != ElemType.UNQUOT_WORD:
             print "Syntax error in '%s': Found invalid word '%s' instead of an Instruction" % (ErrProcName, firstelem[1])
             return None
