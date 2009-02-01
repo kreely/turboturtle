@@ -404,7 +404,7 @@ class CppWriter():
         elif pInstruct.pProc.FullName == "exp":                             # EXP
             CppText += "exp%s(%s)" % (NumTypeMath, ArgText[0])
         elif pInstruct.pProc.FullName == "first":                           # FIRST
-            CppText += "%s[1]" % ArgText[0]
+            CppText += "%s[0]" % ArgText[0]
         elif pInstruct.pProc.FullName == "for":                             # FOR
             my_temp = self.LogoState.TempIdx
             self.LogoState.TempIdx += 1
