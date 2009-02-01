@@ -16,8 +16,11 @@ class Argument:
         self.ArgType = ParamType.UNKNOWN
         self.Elements = []
 
-    def ParseFromCodeElements(self, CodeElements, ProcName, Procedures):
+    def ParseFromCodeElements(self, InstructName, CodeElements, ProcName, Procedures):
         ErrProcName = ProcName or 'global'
+        if len(CodeElements) < 1:
+            print "Synatx Error: missing arguments for '%s' instruction in procedure '%s'" % (InstructName, ErrProcName)
+            return None
         elemtype = CodeElements[0][0]
         # check for the easy ones first
         if elemtype == ElemType.QUOTED_WORD:
@@ -277,7 +280,7 @@ class Instruction:
             self.nParams = 0
             while len(CodeElements) > 0:
                 newarg = Argument()
-                if not newarg.ParseFromCodeElements(CodeElements, ProcName, Procedures):
+                if not newarg.ParseFromCodeElements(self.Name, CodeElements, ProcName, Procedures):
                     return False
                 self.Arguments.append(newarg)
                 self.nParams += 1
@@ -285,7 +288,7 @@ class Instruction:
         # we do know how many arguments will be given to this instruction, so only take that many
         for i in range(self.nParams):
             newarg = Argument()
-            if not newarg.ParseFromCodeElements(CodeElements, ProcName, Procedures):
+            if not newarg.ParseFromCodeElements(self.Name, CodeElements, ProcName, Procedures):
                 return False
             self.Arguments.append(newarg)
         return True
@@ -297,7 +300,7 @@ class Instruction:
             print "Syntax error: missing arguments for 'for' instruction in procedure '%s'" % ErrProcName
             return False
         forcontrol = Argument()
-        if not forcontrol.ParseFromCodeElements(CodeElements, ProcName, Procedures):
+        if not forcontrol.ParseFromCodeElements(self.Name, CodeElements, ProcName, Procedures):
             return False
         if forcontrol.ArgType != ParamType.LISTCODE:
             print "Syntax error: first argument in 'for' instruction in procedure '%s' is expected to be a 'forcontrol' list" % ErrProcName
@@ -307,7 +310,7 @@ class Instruction:
             print "Syntax error: missing 2nd argument for 'for' instruction in procedure '%s'" % ErrProcName
             return False
         instructlist = Argument()
-        if not instructlist.ParseFromCodeElements(CodeElements, ProcName, Procedures):
+        if not instructlist.ParseFromCodeElements(self.Name, CodeElements, ProcName, Procedures):
             return False
         if instructlist.ArgType != ParamType.LISTCODE:
             print "Syntax error: second argument in 'for' instruction in procedure '%s' is expected to be an instruction list" % ErrProcName
@@ -325,7 +328,7 @@ class Instruction:
         self.bParenthesized = False
         while len(forlistelems) > 0:
             newarg = Argument()
-            if not newarg.ParseFromCodeElements(forlistelems, ProcName, Procedures):
+            if not newarg.ParseFromCodeElements(self.Name, forlistelems, ProcName, Procedures):
                 return False
             self.Arguments.append(newarg)
             self.nParams += 1
