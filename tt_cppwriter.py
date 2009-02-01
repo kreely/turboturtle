@@ -362,6 +362,8 @@ class CppWriter():
         # now handle the particular instruction
         if pInstruct.pProc.FullName == ".setspecial":                       # .SETSPECIAL
             return ""
+        elif pInstruct.pProc.FullName == "abs":                             # ABS
+            CppText += "fabs%s(%s)" % (NumTypeMath, ArgText[0])
         elif pInstruct.pProc.FullName == "and":                             # AND
             bFirst = True
             for argtext in ArgText:
@@ -620,6 +622,8 @@ class CppWriter():
         elif pInstruct.pProc.FullName == "setpos":                          # SETPOS
             Arg = pInstruct.Arguments[0]
             elem0type = Arg.Elements[0].Type
+            CppText += IndentText + "if (tt_PenDown)\n"
+            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
             if elem0type == ElemType.NUMBER:
                 if len(Arg.Elements) != 2:
                     print "Syntax error: SETPOS instruction takes an immediate list with exactly 2 numbers, but %i were given." % len(Arg.Elements)
@@ -641,6 +645,8 @@ class CppWriter():
             else:
                 print "Internal error: invalid element type %i '%s' in a List argument for SETPOS." % (elem0type, ElemType.Names[elem0type])
                 return None
+            CppText += IndentText + "if (tt_PenDown)\n"
+            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
         elif pInstruct.pProc.FullName == "setscrunch":                      # SETSCRUNCH
             CppText += IndentText + "tt_ScrunchXY[0] = %s;\n" % ArgText[0]
             CppText += IndentText + "tt_ScrunchXY[1] = %s;\n" % ArgText[1]

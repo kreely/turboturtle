@@ -33,6 +33,7 @@ class Builtin:
         
 # full built-in procedure table
 Builtin.AddBuiltin(".setspecial",  None,    ParamType.NOTHING, False, False, ParamType.QUOTEDWORD, ParamType.NUMBER)
+Builtin.AddBuiltin("abs",          None,    ParamType.NUMBER,  False, False, ParamType.NUMBER)
 Builtin.AddBuiltin("and",          None,    ParamType.BOOLEAN, False, False, ParamType.BOOLEAN,    ParamType.BOOLEAN)
 Builtin.AddBuiltin("and",          None,    ParamType.BOOLEAN, True,  True,  ParamType.BOOLEAN)
 Builtin.AddBuiltin("arctan",       None,    ParamType.NUMBER,  False, False, ParamType.NUMBER)
