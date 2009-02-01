@@ -1,0 +1,29 @@
+; String, from http://www.s193653721.websitehome.co.uk/logoarts/picts/gallery1/string.html
+
+.setspecial "windowsize 400
+.setspecial "framespersec 0.333
+
+forever [Init Loom :StepA :StepB :Offset cs]
+
+To Init
+  Make "StepA Pick [0 2 3 4]
+  Make "StepB Pick [-3 -2 1 2 3 4]
+  Make "Offset 15*Random 9
+End
+
+To Loom :StepA :StepB :Offset
+  For [Angle 0 360 2] [
+    SetPC AngCol :Angle PenUp
+    SetXY 180*Sin :Angle 180*Cos :Angle PenDown  ; Start point on circle
+    SetXY 180*Sin (:StepA*:Angle) 180*Cos (:Offset+(:StepB*:Angle)) ; Finish point
+    ]
+End
+
+To AngCol :Ang
+  ; Output list of red, grn, blue
+  Make "Red 127*(1+Cos :Ang)
+  Make "Grn 127*(1+Cos(120+:Ang))
+  Make "Blue 127*(1+Cos(240+:Ang))
+  Output ( List :Red :Grn :Blue )
+End
+

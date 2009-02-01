@@ -42,7 +42,7 @@ Builtin.AddBuiltin("back",         "bk",    ParamType.NOTHING, False, False, Par
 Builtin.AddBuiltin("butfirst",     None,    ParamType.LISTNUM, False, False, ParamType.LISTNUM)
 Builtin.AddBuiltin("butlast",      None,    ParamType.LISTNUM, False, False, ParamType.LISTNUM)
 Builtin.AddBuiltin("clean",        None,    ParamType.NOTHING, False, False)
-Builtin.AddBuiltin("clearscreen",  None,    ParamType.NOTHING, False, False)
+Builtin.AddBuiltin("clearscreen",  "cs",    ParamType.NOTHING, False, False)
 Builtin.AddBuiltin("cos",          None,    ParamType.NUMBER,  False, False, ParamType.NUMBER)
 Builtin.AddBuiltin("count",        None,    ParamType.NUMBER,  False, False, ParamType.LISTNUM)
 Builtin.AddBuiltin("difference",   None,    ParamType.NUMBER,  False, False, ParamType.NUMBER,     ParamType.NUMBER)

@@ -16,18 +16,19 @@
 #include "wrapper_api.h"
 
 // global variables
-bool bRunning = true;
+static bool bRunning = true;
+static unsigned int uiClockFrameStart;
 
 // static functions
 static bool InitSDL(int *piScreenWidth, int *piScreenHeight, bool bFullscreen);
 static bool InitGL(int iWidth, int iHeight);
+static bool CheckExitKey(void);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Main program function
 
 int main(int argc, void *argv[])
 {
-    SDL_Event event;
     int iWidth = 500;
     int iHeight = 500;
 
@@ -37,28 +38,38 @@ int main(int argc, void *argv[])
     if (!InitGL(iWidth, iHeight))
         return 2;
 
+    // mark the start time
+    uiClockFrameStart = SDL_GetTicks();
+
     // call the LOGO code
     glBegin(GL_LINES);
     tt_LogoMain();
     glEnd();
     SDL_GL_SwapBuffers();
 
-    // Grab all the events off the queue.
-    while (true)
-    {
-        if (!SDL_PollEvent(&event))
-        {
-            SDL_Delay(50);
-            continue;
-        }
-        if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
-            return 0;
-    }
-    
+    // wait until exit key pressed
+    while (!CheckExitKey())
+        SDL_Delay(50);
+
+    return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Helper functions for the wrapper
+
+bool CheckExitKey(void)
+{
+    SDL_Event event;
+
+    // Grab all the events off the queue.
+    while (SDL_PollEvent(&event))
+    {
+        if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
+            return true;
+    }
+
+    return false;
+}
 
 bool InitSDL(int *piScreenWidth, int *piScreenHeight, bool bFullscreen)
 {
@@ -67,7 +78,7 @@ bool InitSDL(int *piScreenWidth, int *piScreenHeight, bool bFullscreen)
     int iFlags = 0;
 
     // First, initialize SDL
-    if (SDL_Init(SDL_INIT_VIDEO) < 0)
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0)
         {
         printf("Video initialization failed: %s\n", SDL_GetError());
         return false;
@@ -108,7 +119,7 @@ bool InitSDL(int *piScreenWidth, int *piScreenHeight, bool bFullscreen)
         }
 
     // set window name
-    SDL_WM_SetCaption("LOGO Animation", "TurboTurtle");
+    SDL_WM_SetCaption("Turbo Turtle LOGO Animation", "TurboTurtle");
 
     return true;
 }
@@ -154,6 +165,40 @@ bool InitGL(int iWidth, int iHeight)
 
 void wrapper_Clean(void)
 {
+    // display the image being drawn
+    glEnd();
+    SDL_GL_SwapBuffers();
+
+    // exit program if exit key was pressed
+    if (CheckExitKey())
+        exit(0);
+
+    // paint the background and set up for drawing lines
+    glClearColor(tt_ColorBackground[0], tt_ColorBackground[1], tt_ColorBackground[2], 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBegin(GL_LINES);
+
+    // if framespersec == 0, return right away
+    if (tt_FramesPerSec == 0.0)
+        return;
+
+    // otherwise, delay until it's time to start the next frame
+    unsigned int uiFrameDuration = (unsigned int) (1000.0 / tt_FramesPerSec);
+    unsigned int uiNextFrameStart = uiClockFrameStart + uiFrameDuration;
+    unsigned int uiCurTime = SDL_GetTicks();
+    if (uiCurTime >= (uiNextFrameStart - 2))
+    {
+        uiClockFrameStart = uiCurTime;
+        return;
+    }
+    while (SDL_GetTicks() < (uiNextFrameStart - 2))
+    {
+        if (CheckExitKey())
+            exit(0);
+        SDL_Delay(4);
+    }
+    uiClockFrameStart = uiNextFrameStart;
+    return;
 }
 
 void wrapper_DrawLineSegment(float *pfOrigPos, float *pfNewPos, bool bWrapEnabled)

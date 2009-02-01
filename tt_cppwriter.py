@@ -54,6 +54,7 @@ class CppWriter():
     # Initialize the default 'static' state of the compiled Logo code
     def InitDefaultState(self):
         self.LogoState.iWindowSize = 100
+        self.LogoState.fFramesPerSec = 0.0
         self.LogoState.bUseScrunch = False
         self.LogoState.bUseWrap = False
         self.LogoState.bNeedColors = False
@@ -77,6 +78,8 @@ class CppWriter():
             elif specialname == 'highprecision':
                 if int(specialnum) != 0:
                     self.LogoState.NumType = 'double'
+            elif specialname == 'framespersec':
+                self.LogoState.fFramesPerSec = specialnum
             else:
                 print "Warning: .setspecial instruction used with unknown variable '%s'" % specialname
         elif pInstruct.Name.lower() in ('setpencolor', 'setpc', 'setbackground', 'setbg') and pInstruct.Arguments[0].ArgType == ParamType.NUMBER:
@@ -103,6 +106,7 @@ class CppWriter():
         self.OutputText += "static bool tt_PenDown = true;\n"
         self.OutputText += "static bool tt_PenPaint = true;\n"
         self.OutputText += "static bool tt_TestValue = false;\n"
+        self.OutputText += "float tt_FramesPerSec = %f;\n" % self.LogoState.fFramesPerSec
         self.OutputText += "int tt_WindowSize = %i;\n" % self.LogoState.iWindowSize
         self.OutputText += "unsigned char tt_ColorPen[4] = {255,255,255,0};\n"
         self.OutputText += "unsigned char tt_ColorBackground[4] = {0,0,0,0};\n"
