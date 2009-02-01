@@ -17,11 +17,17 @@
 
 // global variables
 static bool bRunning = true;
+static bool bFullscreen = false;
+static bool bReturnWhenDone = false;
+static int iScreenWidth = 512;
+static int iScreenHeight = 512;
 static unsigned int uiClockFrameStart;
 
 // static functions
-static bool InitSDL(int *piScreenWidth, int *piScreenHeight, bool bFullscreen);
-static bool InitGL(int iWidth, int iHeight);
+static bool ParseArgs(int argc, void *argv[]);
+static void PrintHelp(const char *pchProgName);
+static bool InitSDL(void);
+static bool InitGL(void);
 static bool CheckExitKey(void);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -29,14 +35,14 @@ static bool CheckExitKey(void);
 
 int main(int argc, void *argv[])
 {
-    int iWidth = 500;
-    int iHeight = 500;
-
-    if (!InitSDL(&iWidth, &iHeight, false))
+    if (!ParseArgs(argc, argv))
         return 1;
 
-    if (!InitGL(iWidth, iHeight))
+    if (!InitSDL())
         return 2;
+
+    if (!InitGL())
+        return 3;
 
     // mark the start time
     uiClockFrameStart = SDL_GetTicks();
@@ -48,7 +54,7 @@ int main(int argc, void *argv[])
     SDL_GL_SwapBuffers();
 
     // wait until exit key pressed
-    while (!CheckExitKey())
+    while (!bReturnWhenDone && !CheckExitKey())
         SDL_Delay(50);
 
     return 0;
@@ -56,6 +62,52 @@ int main(int argc, void *argv[])
 
 ///////////////////////////////////////////////////////////////////////////////
 // Helper functions for the wrapper
+
+bool ParseArgs(int argc, void *argv[])
+{
+    for (int i = 1; i < argc; i++)
+    {
+        if (strcmp((char *) argv[i], "--fullscreen") == 0)
+            bFullscreen = true;
+        else if (strcmp((char *) argv[i], "--exitwhendone") == 0)
+            bReturnWhenDone = true;
+        else if (strcmp((char *) argv[i], "--help") == 0)
+        {
+            PrintHelp((char *) argv[0]);
+            return false;
+        }
+        else if (strcmp((char *) argv[i], "--resolution") == 0)
+        {
+            if (argc - i - 1 < 2)
+            {
+                PrintHelp((char *) argv[0]);
+                printf("Error: --resolution option given but missing XSIZE and/or YSIZE.\n\n");
+                return false;
+            }
+            iScreenWidth = atoi((char *) argv[i+1]);
+            iScreenHeight = atoi((char *) argv[i+2]);
+            i += 2;
+        }
+        else
+        {
+            PrintHelp((char *) argv[0]);
+            printf("Error: Invalid option '%s'\n\n", argv[i]);
+            return false;
+        }
+    }
+    return true;
+}
+
+void PrintHelp(const char *pchProgName)
+{
+    printf("%s - A TurboTurtle Logo Program\n\n", pchProgName);
+    printf("Options:\n");
+    printf("  --help                    - Print this message\n");
+    printf("  --resolution XSIZE YSIZE  - Set the window or fullscreen resolution to XSIZE x YSIZE\n");
+    printf("  --fullscreen              - Set fullscreen video mode\n");
+    printf("  --exitwhendone            - Exit immediately when done instead of waiting for Escape\n");
+    printf("\n");
+}
 
 bool CheckExitKey(void)
 {
@@ -71,7 +123,7 @@ bool CheckExitKey(void)
     return false;
 }
 
-bool InitSDL(int *piScreenWidth, int *piScreenHeight, bool bFullscreen)
+bool InitSDL(void)
 {
     const SDL_VideoInfo* psInfo = NULL;
     int iBPP = 0;
@@ -98,20 +150,21 @@ bool InitSDL(int *piScreenWidth, int *piScreenHeight, bool bFullscreen)
     if (bFullscreen)
         {
         iFlags |= SDL_FULLSCREEN;
-        if (SDL_SetVideoMode(*piScreenWidth, *piScreenHeight, iBPP, iFlags) == 0)
+        if (SDL_SetVideoMode(iScreenWidth, iScreenHeight, iBPP, iFlags) == 0)
             {
             printf("Video mode set failed: %s\n", SDL_GetError());
             return false;
             }
         // get current screen resolution
         SDL_Surface *pScreen = SDL_GetVideoSurface();
-        *piScreenWidth = pScreen->w;
-        *piScreenHeight = pScreen->h;
+        iScreenWidth = pScreen->w;
+        iScreenHeight = pScreen->h;
+        SDL_ShowCursor(SDL_DISABLE);
         }
     else
         {
         // create a windowed surface with the given dimensions
-        if (SDL_SetVideoMode(*piScreenWidth, *piScreenHeight, iBPP, iFlags) == 0)
+        if (SDL_SetVideoMode(iScreenWidth, iScreenHeight, iBPP, iFlags) == 0)
             {
             printf("Video mode set failed: %s\n", SDL_GetError());
             return false;
@@ -124,7 +177,7 @@ bool InitSDL(int *piScreenWidth, int *piScreenHeight, bool bFullscreen)
     return true;
 }
 
-bool InitGL(int iWidth, int iHeight)
+bool InitGL(void)
 {
     // Flat shading model
     glShadeModel(GL_FLAT);
@@ -136,13 +189,24 @@ bool InitGL(int iWidth, int iHeight)
     glClearColor(0, 0, 0, 0);
 
     // Setup viewport
-    glViewport(0, 0, iWidth, iHeight);
+    glViewport(0, 0, iScreenWidth, iScreenHeight);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
     // don't use perspective
-    glOrtho(-tt_WindowSize/2, tt_WindowSize/2, -tt_WindowSize/2, tt_WindowSize/2, -1, 1);
+    int iViewWidth, iViewHeight;
+    if (iScreenWidth <= iScreenHeight)
+    {
+        iViewWidth = tt_WindowSize;
+        iViewHeight = iScreenHeight * tt_WindowSize / iScreenWidth;
+    }
+    else
+    {
+        iViewHeight = tt_WindowSize;
+        iViewWidth = iScreenWidth * tt_WindowSize / iScreenHeight;
+    }
+    glOrtho(-iViewWidth/2, iViewWidth/2, -iViewHeight/2, iViewHeight/2, -1, 1);
 
     // set up z-buffer parameters
     glDisable(GL_DEPTH_TEST);
