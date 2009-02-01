@@ -20,6 +20,7 @@ CppHead = """
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include "wrapper_api.h"
@@ -56,6 +57,7 @@ class CppWriter():
         self.LogoState.bUseScrunch = False
         self.LogoState.bUseWrap = False
         self.LogoState.bNeedColors = False
+        self.LogoState.bNeedRandom = False
         self.LogoState.bNeedTowardsFunc = False
         self.LogoState.NumType = 'float'
         self.LogoState.TempIdx = 0
@@ -85,6 +87,8 @@ class CppWriter():
             self.LogoState.bUseWrap = True
         elif pInstruct.Name.lower() == 'towards' and pInstruct.Arguments[0].Elements[0].Type != ElemType.NUMBER:
             self.LogoState.bNeedTowardsFunc = True
+        elif pInstruct.Name.lower() == 'random':
+            self.LogoState.bNeedRandom = True
         return True
 
     # Write out the global variables for the CPP code
@@ -114,13 +118,23 @@ class CppWriter():
             self.OutputText += "static %s tt_Towards(const CList<%s> &list)\n{\n" % (self.LogoState.NumType, self.LogoState.NumType)
             self.OutputText += " " * self.IndentSize
             self.OutputText += "return atan2(list[0] - tt_TurtlePos[0], list[1] - tt_TurtlePos[1]) * tt_DegreeRad;\n}\n\n"
-        # finally, generate a string of C++ definitions for the Logo program's global variables
+        if self.LogoState.bNeedRandom:
+            self.OutputText += "static int tt_Random(int iRange)\n{\n"
+            self.OutputText += " " * self.IndentSize
+            self.OutputText += "return ((long long) iRange * rand() / ((long long) RAND_MAX + 1));\n}\n"
+            self.OutputText += "static int tt_Random(int iStart, int iEnd)\n{\n"
+            self.OutputText += " " * self.IndentSize
+            self.OutputText += "return iStart + ((long long) (iEnd - iStart + 1) * rand() / ((long long) RAND_MAX + 1));\n}\n\n"
+        # generate a string of C++ definitions for the Logo program's global variables
         InitCode = ""
         for var in GlobalVariables:
             Code = self.WriteVariableDefinition(var, 0)
             if Code is None:
                 return None
             InitCode += Code
+        # add any extra program initialization code to run at the beginning of tt_LogoMain()
+        if self.LogoState.bNeedRandom:
+            InitCode += " " * self.IndentSize + "srand((unsigned int) time(NULL));\n"
         if len(InitCode) > 0:
             InitCode += "\n"
         return InitCode
@@ -513,6 +527,8 @@ class CppWriter():
         elif pInstruct.pProc.FullName == "penpaint":                        # PENPAINT
             CppText += IndentText + "tt_PenPaint = true;\n"
             CppText += IndentText + "glColor3ubv(tt_ColorPen);\n"
+        elif pInstruct.pProc.FullName == "pick":                            # PICK
+            CppText += "%s.Pick()" % ArgText[0]
         elif pInstruct.pProc.FullName == "pos":                             # POS
             CppText += "CList<%s>(tt_TurtlePos[0], tt_TurtlePos[1])" % self.LogoState.NumType
         elif pInstruct.pProc.FullName == "power":                           # POWER
@@ -535,6 +551,11 @@ class CppWriter():
             CppText += "cos%s(%s)" % (NumTypeMath, ArgText[0])
         elif pInstruct.pProc.FullName == "radsin":                          # RADSIN
             CppText += "sin%s(%s)" % (NumTypeMath, ArgText[0])
+        elif pInstruct.pProc.FullName == "random":                          # RANDOM
+            if len(ArgText) == 1:
+                CppText += "tt_Random((int) (%s))" % ArgText[0]
+            else:
+                CppText += "tt_Random((int) (%s), (int) (%s))" % (ArgText[0], ArgText[1])
         elif pInstruct.pProc.FullName == "remainder":                       # REMAINDER
             CppText += "(int) (%s) %% (int) (%s)" % (ArgText[0], ArgText[1])
         elif pInstruct.pProc.FullName == "repcount":                        # REPCOUNT
@@ -555,6 +576,11 @@ class CppWriter():
                 CppText += codetext
             CppText += IndentText + "}\n"
             self.LogoState.InnerLoopIdx = -1
+        elif pInstruct.pProc.FullName == "rerandom":                        # RERANDOM
+            if len(ArgText) == 0:
+                CppText += IndentText + "srand(0);\n"
+            else:
+                CppText += IndentText + "srand((int) (%s));\n" % ArgText[0]
         elif pInstruct.pProc.FullName == "reverse":                         # REVERSE
             CppText += "%s.Reverse()" % ArgText[0]
         elif pInstruct.pProc.FullName == "right":                           # RIGHT

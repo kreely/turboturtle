@@ -4,6 +4,7 @@
 /*  Copyright (c) 2009 by Richard Goedeken  */
 /********************************************/
 
+#include <stdlib.h>
 #include <stdarg.h>
 #include <memory.h>
 
@@ -252,6 +253,18 @@ class CList
         return this->aInternal[this->iListSize - 1];
       else
         return this->pExternal[this->iListSize - 1];
+    }
+    
+    // function for PICK instruction
+    T Pick(void) const
+    {
+      if (this->iListSize <= 0)
+        return 0;
+      int idx = ((long long) this->iListSize * rand() / ((long long) RAND_MAX + 1));
+      if (this->pExternal == NULL)
+        return this->aInternal[idx];
+      else
+        return this->pExternal[idx];
     }
     
     // function for COUNT and EMPTYP instructions

@@ -153,7 +153,7 @@ class TT_App:
         writer.OutputText += "void tt_LogoMain(void)\n{\n"
         if GlobalInitCode != "":
             writer.OutputText += " " * writer.IndentSize + "// initialize global variables\n"
-            writer.OutputText += GlobalInitCode + "\n"
+            writer.OutputText += GlobalInitCode
         writer.InitProcedure()
         for instruct in self.MainInstructions:
             if not writer.WriteInstruction(instruct, 1, True):
