@@ -44,6 +44,18 @@ int main(int argc, void *argv[])
     if (!InitGL())
         return 3;
 
+    // set line smoothing
+    if (tt_LineSmooth > 0)
+    {
+        glEnable (GL_LINE_SMOOTH);
+        glEnable (GL_BLEND);
+        glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        if (tt_LineSmooth == 1)
+            glHint (GL_LINE_SMOOTH_HINT, GL_FASTEST);
+        else
+            glHint (GL_LINE_SMOOTH_HINT, GL_NICEST);
+    }
+
     // mark the start time
     uiClockFrameStart = SDL_GetTicks();
 

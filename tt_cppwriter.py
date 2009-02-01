@@ -54,6 +54,7 @@ class CppWriter():
     # Initialize the default 'static' state of the compiled Logo code
     def InitDefaultState(self):
         self.LogoState.iWindowSize = 100
+        self.LogoState.iLineSmooth = 0
         self.LogoState.fFramesPerSec = 0.0
         self.LogoState.bUseScrunch = False
         self.LogoState.bUseWrap = False
@@ -80,6 +81,8 @@ class CppWriter():
                     self.LogoState.NumType = 'double'
             elif specialname == 'framespersec':
                 self.LogoState.fFramesPerSec = specialnum
+            elif specialname == 'linesmooth':
+                self.LogoState.iLineSmooth = int(specialnum)
             else:
                 print "Warning: .setspecial instruction used with unknown variable '%s'" % specialname
         elif pInstruct.Name.lower() in ('setpencolor', 'setpc', 'setbackground', 'setbg') and pInstruct.Arguments[0].ArgType == ParamType.NUMBER:
@@ -96,6 +99,7 @@ class CppWriter():
 
     # Write out the global variables for the CPP code
     def WriteGlobals(self, GlobalVariables):
+        self.OutputText += "// Static data, only used by code in this source file\n"
         # start by writing the special TurboTurtle variables
         self.OutputText += "static const %s tt_DegreeRad = 180.0 / 3.141592653589793;\n" % self.LogoState.NumType
         self.OutputText += "static const %s tt_RadDegree = 3.141592653589793 / 180.0;\n" % self.LogoState.NumType
@@ -106,7 +110,9 @@ class CppWriter():
         self.OutputText += "static bool tt_PenDown = true;\n"
         self.OutputText += "static bool tt_PenPaint = true;\n"
         self.OutputText += "static bool tt_TestValue = false;\n"
+        self.OutputText += "\n// Global data, also readable and writable by the wrapper\n"
         self.OutputText += "float tt_FramesPerSec = %f;\n" % self.LogoState.fFramesPerSec
+        self.OutputText += "int tt_LineSmooth = %i;\n" % self.LogoState.iLineSmooth
         self.OutputText += "int tt_WindowSize = %i;\n" % self.LogoState.iWindowSize
         self.OutputText += "unsigned char tt_ColorPen[4] = {255,255,255,0};\n"
         self.OutputText += "unsigned char tt_ColorBackground[4] = {0,0,0,0};\n"

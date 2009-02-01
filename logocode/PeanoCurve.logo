@@ -1,0 +1,37 @@
+; Peano Curve, from http://www.s193653721.websitehome.co.uk/logoarts/picts/gallery1/peano.html
+
+.setspecial "windowsize 400
+.setspecial "linesmooth 2
+
+Curves
+
+To Curves
+  For [Level 0 2]
+  [SetPC Item :Level+1 [6 4 1] SetPenSize 10-(4*:Level)
+  Init :Level Curve :Level]
+End 
+
+To Init :Level
+  Make "CellSize (Power 2 0.5)*(120/(Power 3 :Level))
+  Make "Size :CellSize*0.6
+  Make "TurnSize :CellSize*0.283
+  PenUp SetPos [-180 -180] SetHeading 45
+  Forward :CellSize*0.2 PenDown
+End
+
+To Curve :Level
+  If :Level < 0 [Forward :Size Stop]
+  Curve :Level-1
+  LeftTurn Curve :Level-1
+  Repeat 3 [RiteTurn Curve :Level-1]
+  Repeat 3 [LeftTurn Curve :Level-1]
+  RiteTurn Curve :Level-1
+End
+
+To LeftTurn
+  Left 45 Forward :TurnSize Left 45
+End
+
+To RiteTurn
+  Right 45 Forward :TurnSize Right 45
+End 

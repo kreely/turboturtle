@@ -9,6 +9,7 @@
 void tt_LogoMain(void);
 extern float         tt_FramesPerSec;
 extern int           tt_WindowSize;
+extern int           tt_LineSmooth;
 extern unsigned char tt_ColorPen[];
 extern unsigned char tt_ColorBackground[];
 
