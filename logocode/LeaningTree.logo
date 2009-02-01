@@ -1,0 +1,27 @@
+; Leaning Tree, from http://www.s193653721.websitehome.co.uk/logoarts/progs/trees/tree1.html
+
+.setspecial "windowsize 400
+.setspecial "framespersec 30
+.setspecial "linesmooth 2
+
+Go
+
+To Tree :Length
+  If :Length < 5 [Stop]                  ; ends recursion if branch length too small
+  SetPenSize :Length/9                   ; reduce pen width as branch length gets smaller
+  SetPC TreeCol :Length                  ; branch color depends on length
+  PenDown Forward :Length Left :Angle/2
+  Tree :Length*0.65 Right :Angle         ; short branch length
+  Tree :Length*0.85 Left :Angle/2        ; long branch length
+  PenUp Back :Length                     ; return to starting point
+End
+
+To TreeCol :Length
+  Make "Green Round 2.5*(100-:Length)    ; green depends on length
+  Output ( List 255 :Green 0 )           ; red set to 255 and blue to 0
+End
+
+To Go
+  SetPos [-94 -160] Right 5
+  Make "Angle 50 Tree 85                 ; initial angle of 50 shown in red
+End
