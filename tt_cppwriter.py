@@ -482,7 +482,7 @@ class CppWriter():
         elif pInstruct.pProc.FullName == "int":                             # INT
             CppText += "(int) (%s)" % ArgText[0]
         elif pInstruct.pProc.FullName == "item":                            # ITEM
-            CppText += "%s[(int) %s]" % (ArgText[1], ArgText[0])
+            CppText += "%s[(int) (%s)-1]" % (ArgText[1], ArgText[0])
         elif pInstruct.pProc.FullName == "last":                            # LAST
             CppText += "%s.Last()" % ArgText[0]
         elif pInstruct.pProc.FullName == "left":                            # LEFT
