@@ -1,0 +1,36 @@
+; Spiro, from http://www.s193653721.websitehome.co.uk/logoarts/progs/spirograph/spiro.html
+
+.setspecial "windowsize 400
+.setspecial "framespersec 0.3
+.setspecial "linesmooth 2
+
+SetPenSize 1.5
+Forever [Rand Spir ClearScreen]
+
+To Spir
+  PenUp SetPos XYCurve 0 PenDown
+  For [T 1 360] [SetPC AngCol :T SetPos XYCurve :T]
+End
+
+To Rand
+  Make "R Pick [80 90 100 110 120]
+  Make "S 160-:R
+  Make "A (1 + Random 9)
+  Make "B (1 + Random 9)
+  Make "C (1 + Random 9)
+  Make "D (1 + Random 9)
+End
+
+To AngCol :Theta
+  Make "Red Abs 255 *Cos (:Theta)
+  Make "Gre Abs 255 *Cos (:Theta + 120)
+  Make "Blu Abs 255 *Cos (:Theta + 240)
+  Output (List :Red :Gre :Blu)
+End
+
+To XYCurve :T
+  Make "X :R*(Sin :A*:T) + :S*(Sin :B*:T)
+  Make "Y :R*(Cos :C*:T) + :S*(Cos :D*:T)
+  Output (List :X :Y)
+End
+

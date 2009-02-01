@@ -1,0 +1,35 @@
+; Spiral Cirles, based on Spiral Squares
+
+.setspecial "windowsize 400
+.setspecial "framespersec 40
+.setspecial "linesmooth 2
+
+Init Forever [ PenUp SetPos [-46 -210] SetHeading -30 Circle :vsize :vangle :vratio Advance Clearscreen ]
+
+To Circle :Size :Angle :Ratio
+  If :Size < 1 [Stop]         ; stop when size too small
+  PenDown Repeat 60 [Forward :Size/15 Left 6] ; draw a circle
+  PenUp Forward :Size Right :Angle
+  Circle :Size*:Ratio :Angle :Ratio        ; do again with smaller size
+End
+
+to Advance
+  make "vsize :vsize + :dsize
+  make "vangle :vangle + :dangle
+  make "vratio :vratio + :dratio
+  if or :vsize < 80 :vsize > 110 [make "dsize -:dsize]
+  if or :vangle < 20 :vangle > 40 [make "dangle -:dangle]
+  if or :vratio < 0.8 :vratio > 0.92 [make "dratio -:dratio]
+end
+
+To Init
+  SetPC 7
+  PenDown
+  make "vsize 92
+  make "vangle 30
+  make "vratio 0.9
+  make "dsize (0.02 + 0.04 * (0.01 * random 100)) * ((2 * random 2) - 1)
+  make "dangle (0.03 + 0.05 * (0.01 * random 100)) * ((2 * random 2) - 1)
+  make "dratio 0
+End
+
