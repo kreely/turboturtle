@@ -54,7 +54,7 @@ class CppWriter():
     # Initialize the default 'static' state of the compiled Logo code
     def InitDefaultState(self):
         self.LogoState.iWindowSize = 100
-        self.LogoState.iLineSmooth = 0
+        self.LogoState.iLineSmooth = 2
         self.LogoState.fFramesPerSec = 0.0
         self.LogoState.bUseScrunch = False
         self.LogoState.bUseWrap = False

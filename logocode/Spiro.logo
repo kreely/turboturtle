@@ -2,7 +2,6 @@
 
 .setspecial "windowsize 400
 .setspecial "framespersec 0.3
-.setspecial "linesmooth 2
 
 SetPenSize 1.5
 Forever [Rand Spir ClearScreen]

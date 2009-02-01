@@ -77,10 +77,17 @@ int main(int argc, void *argv[])
 
 bool ParseArgs(int argc, void *argv[])
 {
+    bool bCustomRes = false;
+
     for (int i = 1; i < argc; i++)
     {
         if (strcmp((char *) argv[i], "--fullscreen") == 0)
             bFullscreen = true;
+            if (!bCustomRes)
+            {
+                iScreenWidth = 1024;        //default to 1024x768 if --fullscreen is given
+                iScreenHeight = 768;
+            }
         else if (strcmp((char *) argv[i], "--exitwhendone") == 0)
             bReturnWhenDone = true;
         else if (strcmp((char *) argv[i], "--help") == 0)
@@ -90,6 +97,7 @@ bool ParseArgs(int argc, void *argv[])
         }
         else if (strcmp((char *) argv[i], "--resolution") == 0)
         {
+            bCustomRes = true;
             if (argc - i - 1 < 2)
             {
                 PrintHelp((char *) argv[0]);

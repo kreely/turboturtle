@@ -2,7 +2,6 @@
 
 .setspecial "windowsize 400
 .setspecial "framespersec 30
-.setspecial "linesmooth 2
 
 Init Forever [ SetPos [-46 -210] SetHeading -30 Square :vsize :vangle :vratio Advance Clearscreen ]
 

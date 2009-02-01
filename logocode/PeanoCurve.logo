@@ -1,7 +1,6 @@
 ; Peano Curve, from http://www.s193653721.websitehome.co.uk/logoarts/picts/gallery1/peano.html
 
 .setspecial "windowsize 400
-.setspecial "linesmooth 2
 
 Curves
 

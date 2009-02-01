@@ -3,6 +3,7 @@
 .setspecial "windowsize 400
 .setspecial "framespersec 0.333
 
+setpensize 1.5
 forever [Init Loom :StepA :StepB :Offset cs]
 
 To Init

@@ -2,7 +2,6 @@
 
 .setspecial "windowsize 400
 .setspecial "framespersec 30
-.setspecial "linesmooth 2
 
 Go
 
