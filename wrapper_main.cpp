@@ -238,7 +238,7 @@ void wrapper_Clean(void)
         exit(0);
 
     // paint the background and set up for drawing lines
-    glClearColor(tt_ColorBackground[0], tt_ColorBackground[1], tt_ColorBackground[2], 0);
+    glClearColor(tt_ColorBackground[0]/255.0, tt_ColorBackground[1]/255.0, tt_ColorBackground[2]/255.0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
     glBegin(GL_LINES);
 
