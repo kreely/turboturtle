@@ -1,0 +1,31 @@
+; Spirograph, from: http://www.s193653721.websitehome.co.uk/logoarts/progs/spirograph/spirog.html
+
+.setspecial "windowsize 400
+.setspecial "framespersec 0.4
+
+Forever [Rand2 Spir ClearScreen]
+
+To Spir
+  For [S 10 70 5] [
+  PenUp SetPos XYCurve :S 0 PenDown SetPC AngCol :S+10*:B
+  For [T 1 360] [SetPos XYCurve :S :T]]
+End
+
+To XYCurve :S :T
+  Make "X 120 * (Sin :S+:A*:T) + :S * (Cos (:B*:T))
+  Make "Y 120 * (Cos :S+:A*:T) + :S * (Sin (:B*:T))
+  Output (List :X :Y)
+End
+
+To Rand2
+  Make "A (Pick [-1 1]) * Pick [1 2]
+  Make "B (Pick [-1 1]) * Pick [2 3 4 5 6]
+End
+
+To AngCol :Theta
+  Make "Red Abs 255 *Cos (:Theta)
+  Make "Gre Abs 255 *Cos (:Theta + 120)
+  Make "Blu Abs 255 *Cos (:Theta + 240)
+  Output ( List :Red :Gre :Blu )
+End
+
