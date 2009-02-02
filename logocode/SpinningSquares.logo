@@ -1,0 +1,23 @@
+; Spinning Squares, from: http://www.s193653721.websitehome.co.uk/logoarts/progs/recur/spinningsqrs.html
+
+.setspecial "windowsize 400
+
+Right 6 Square 340
+
+To Hue :Angle
+  Make "Red Round 127*(1+Sin :Angle)
+  Make "Green Round 127*(1+Sin(120+:Angle))
+  Make "Blue Round 127*(1+Sin(240+:Angle))
+  Output ( List :Red :Green :Blue )
+End
+
+To Square :Side
+  If :Side < 12 [Stop]
+  PenUp Back :Side/2 Right 90 Back :Side/2 PenDown
+  SetPC Hue 1.4*:Side
+  Repeat 4 [Forward :Side Left 90]
+  PenUp Forward :Side/2 Left 90 Forward :Side/2 PenDown
+  Left 4
+  Square :Side-8
+End
+
