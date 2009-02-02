@@ -1,0 +1,35 @@
+; StarMorph, from: http://www.s193653721.websitehome.co.uk/logoarts/progs/anim/starmorph.html
+
+.setspecial "windowsize 400
+.setspecial "framespersec 30
+
+SetPenSize 2
+Forever [StarMorph]
+
+To Init :Theta
+  Make "R 400*Sin (2*:Theta)
+  Make "A :R*Sin :Theta
+  Make "B :R*Cos :Theta
+  Make "X 0 Make "Y 0
+End
+
+To StarMorph
+  Make "Col1 Pick [ 1 2 4 6 7 ]
+  Make "Col2 Pick [ 1 2 4 6 7 ]
+  For [Theta 0 90 0.5] [
+    Init :Theta
+    SetHeading 0 PenUp Home Right :Theta
+    Repeat 9 [
+      Forward :A Left 140
+      Forward :B Left 140
+      Make "X :X + XCOR
+      Make "Y :Y + YCOR]
+    SetXY Minus :X/9 Minus :Y/9
+    SetHeading 0 PenDown Right :Theta
+    Repeat 9 [
+      SetPC :Col1 Forward :A Left 140
+      SetPC :Col2 Forward :B Left 140]
+    ClearScreen
+  ]
+End
+
