@@ -2,4 +2,6 @@ test
 *.pyc
 *~
 *.o
+logocode/*.cpp
+logocode/*.o
 
