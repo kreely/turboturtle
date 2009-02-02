@@ -60,6 +60,7 @@ class CppWriter():
         self.LogoState.bUseWrap = False
         self.LogoState.bNeedColors = False
         self.LogoState.bNeedRandom = False
+        self.LogoState.bNeedGaussian = False
         self.LogoState.bNeedTowardsFunc = False
         self.LogoState.NumType = 'float'
         self.LogoState.TempIdx = 0
@@ -95,10 +96,16 @@ class CppWriter():
             self.LogoState.bNeedTowardsFunc = True
         elif pInstruct.Name.lower() == 'random':
             self.LogoState.bNeedRandom = True
+        elif pInstruct.Name.lower() == 'gaussian':
+            self.LogoState.bNeedGaussian = True
         return True
 
     # Write out the global variables for the CPP code
     def WriteGlobals(self, GlobalVariables):
+        IndentText = " " * self.IndentSize
+        NumTypeMath = ""
+        if self.LogoState.NumType == 'float':
+            NumTypeMath = "f"
         self.OutputText += "// Static data, only used by code in this source file\n"
         # start by writing the special TurboTurtle variables
         self.OutputText += "static const %s tt_DegreeRad = 180.0 / 3.141592653589793;\n" % self.LogoState.NumType
@@ -126,15 +133,28 @@ class CppWriter():
         # then write out definitions for static functions which might be used by the logo code
         if self.LogoState.bNeedTowardsFunc:
             self.OutputText += "static %s tt_Towards(const CList<%s> &list)\n{\n" % (self.LogoState.NumType, self.LogoState.NumType)
-            self.OutputText += " " * self.IndentSize
-            self.OutputText += "return atan2(list[0] - tt_TurtlePos[0], list[1] - tt_TurtlePos[1]) * tt_DegreeRad;\n}\n\n"
+            self.OutputText += IndentText + "return atan2(list[0] - tt_TurtlePos[0], list[1] - tt_TurtlePos[1]) * tt_DegreeRad;\n}\n\n"
         if self.LogoState.bNeedRandom:
             self.OutputText += "static int tt_Random(int iRange)\n{\n"
-            self.OutputText += " " * self.IndentSize
-            self.OutputText += "return ((long long) iRange * rand() / ((long long) RAND_MAX + 1));\n}\n"
+            self.OutputText += IndentText + "return ((long long) iRange * rand() / ((long long) RAND_MAX + 1));\n}\n"
             self.OutputText += "static int tt_Random(int iStart, int iEnd)\n{\n"
-            self.OutputText += " " * self.IndentSize
-            self.OutputText += "return iStart + ((long long) (iEnd - iStart + 1) * rand() / ((long long) RAND_MAX + 1));\n}\n\n"
+            self.OutputText += IndentText + "return iStart + ((long long) (iEnd - iStart + 1) * rand() / ((long long) RAND_MAX + 1));\n}\n\n"
+        if self.LogoState.bNeedGaussian:
+            self.OutputText += "static %s tt_Gaussian(void)\n{\n" % self.LogoState.NumType
+            self.OutputText += IndentText + "static bool bHaveOne = false;\n"
+            self.OutputText += IndentText + "static %s u2;\n" % self.LogoState.NumType
+            self.OutputText += IndentText + "%s x1, x2, w, u1;\n" % self.LogoState.NumType
+            self.OutputText += IndentText + "if (bHaveOne) { bHaveOne = false; return u2; }\n"
+            self.OutputText += IndentText + "do {\n"
+            self.OutputText += IndentText * 2 + "x1 = 2.0 * (((%s) rand() + 1.0) / ((%s) RAND_MAX + 2.0)) - 1.0;\n" % (self.LogoState.NumType, self.LogoState.NumType)
+            self.OutputText += IndentText * 2 + "x2 = 2.0 * (((%s) rand() + 1.0) / ((%s) RAND_MAX + 2.0)) - 1.0;\n" % (self.LogoState.NumType, self.LogoState.NumType)
+            self.OutputText += IndentText * 2 + "w = x1 * x1 + x2 * x2;\n"
+            self.OutputText += IndentText + "} while (w >= 1.0);\n"
+            self.OutputText += IndentText + "w = sqrt%s((-2.0 * log%s(w)) / w);\n" % (NumTypeMath, NumTypeMath)
+            self.OutputText += IndentText + "u1 = x1 * w;\n"
+            self.OutputText += IndentText + "u2 = x2 * w;\n"
+            self.OutputText += IndentText + "bHaveOne = true;\n"
+            self.OutputText += IndentText + "return u1;\n}\n\n"
         # generate a string of C++ definitions for the Logo program's global variables
         InitCode = ""
         for var in GlobalVariables:
@@ -144,7 +164,7 @@ class CppWriter():
             InitCode += Code
         # add any extra program initialization code to run at the beginning of tt_LogoMain()
         if self.LogoState.bNeedRandom:
-            InitCode += " " * self.IndentSize + "srand((unsigned int) time(NULL));\n"
+            InitCode += IndentText + "srand((unsigned int) time(NULL));\n"
         if len(InitCode) > 0:
             InitCode += "\n"
         return InitCode
@@ -452,6 +472,8 @@ class CppWriter():
             return self.GetCppBuiltinMove(IndentText, pInstruct.Arguments[0], "+")
         elif pInstruct.pProc.FullName == "fput":                            # FPUT
             CppText += "CList<%s>(%s, %s)" % (self.LogoState.NumType, ArgText[0], ArgText[1])
+        elif pInstruct.pProc.FullName == "gaussian":                        # GAUSSIAN
+            CppText += "tt_Gaussian()"
         elif pInstruct.pProc.FullName == "goto":                            # GOTO
             CppText += IndentText + "goto tag_%s;\n" % ArgText[0][1:-1]
         elif pInstruct.pProc.FullName == "heading":                         # HEADING

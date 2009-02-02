@@ -57,6 +57,7 @@ Builtin.AddBuiltin("for",          None,    ParamType.NOTHING, False, False, Par
 Builtin.AddBuiltin("forever",      None,    ParamType.NOTHING, False, False, ParamType.LISTCODE)
 Builtin.AddBuiltin("forward",      "fd",    ParamType.NOTHING, False, False, ParamType.NUMBER)
 Builtin.AddBuiltin("fput",         None,    ParamType.LISTNUM, False, False, ParamType.NUMBER,     ParamType.LISTNUM)
+Builtin.AddBuiltin("gaussian",     None,    ParamType.NUMBER,  False, False)
 Builtin.AddBuiltin("goto",         None,    ParamType.NOTHING, False, False, ParamType.QUOTEDWORD)
 Builtin.AddBuiltin("heading",      None,    ParamType.NUMBER,  False, False)
 Builtin.AddBuiltin("home",         None,    ParamType.NOTHING, False, False)
