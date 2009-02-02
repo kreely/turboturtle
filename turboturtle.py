@@ -26,7 +26,8 @@ def main():
         return
     # create an application object and run it
     app = TT_App(sys.argv[1], sys.argv[2])
-    app.Run()
+    if not app.Run():
+        sys.exit(1)
     # All Done
 
 def printhelp():
@@ -51,22 +52,22 @@ class TT_App:
         # the second pass extracts the defined procedures and removes linefeeds to make streams of instructions
         (self.MainCode, self.Procedures) = Parser.ExtractProcedures(self.InputCode)
         if self.MainCode == None or self.Procedures == None:
-            return
+            return False
         # the next step is to parse instructions for the main code and the subroutines
         self.MainInstructions = self.ParseInstructions(self.MainCode, None)
         if self.MainInstructions is None:
-            return
+            return False
         for proc in self.Procedures:
             proc.Instructions = self.ParseInstructions(proc.CodeText, proc)
             if proc.Instructions is None:
-                return
+                return False
         # create local/global variables from MAKE, LOCALMAKE, and FOR instructions
         self.GlobalVariables = []
         if not self.RecurseAllInstructions(self.CreateVarFromInstruct):
-            return
+            return False
         # check for instruction arguments using un-defined variables
         if not self.RecurseAllInstructions(self.CheckVariables):
-            return
+            return False
         # check all the user-defined Procedures to find those which return no value, and set their return type to NOTHING
         for proc in self.Procedures:
             bReturnsValue = False
@@ -83,46 +84,46 @@ class TT_App:
             for instruct in self.MainInstructions:
                 newfix = self.FixupRecurse(instruct, None)
                 if newfix == None:
-                    return
+                    return False
                 nFixups += newfix
             for proc in self.Procedures:
                 for instruct in proc.Instructions:
                     newfix = self.FixupRecurse(instruct, proc)
                     if newfix == None:
-                        return
+                        return False
                     nFixups += newfix
             if nFixups == 0:
                 break
         # look for unused procedures and remove them
         pUnusedProcs = self.Procedures[:]  # make a copy of the list so we dont trash self.Procedures
         if not self.RecurseAllInstructions(self.RemoveCalledProcedures, pUnusedProcs):
-            return
+            return False
         for proc in pUnusedProcs:
             self.Procedures.remove(proc)
         # look for unused global variables and remove them as well (they may have been used only in a deleted procedure)
         pUnusedGlobals = self.GlobalVariables[:]  # make a copy of the list so we don't trash self.GlobalVariables
         if not self.RecurseAllInstructions(self.RemoveUsedGlobals, pUnusedGlobals):
-            return
+            return False
         for var in pUnusedGlobals:
             self.GlobalVariables.remove(var)
         # verify that the ParamTypes of all global and local variables are defined
         for var in self.GlobalVariables:
             if var.Type == ParamType.UNKNOWN:
                 print "Logical error: Type of global variable named '%s' cannot be determined." % var.Name
-                return
+                return False
         for proc in self.Procedures:
             for var in proc.LocalVariables:
                 if var.Type == ParamType.UNKNOWN:
                     print "Logical error: Type of local variable named '%s' in procedure '%s' cannot be determined." % (var.Name, proc.Name)
-                    return
+                    return False
         # verify that Return value for each Procedure is defined
         for proc in self.Procedures:
             if proc.ReturnType == ParamType.UNKNOWN:
                 print "Logical error: Type of return value from procedure '%s' cannot be determined." % proc.Name
-                return
+                return False
         # verify that the Procedure pointers and ParamType of all Arguments in each instruction are defined
         if not self.RecurseAllInstructions(self.FinalInstructionCheck):
-            return
+            return False
         # at this point, the "front end" of the compiler is done and only the back-end work remains
         writer = CppWriter()
         # start by creating C++-friendly names for all of the procedures and variables
@@ -136,16 +137,16 @@ class TT_App:
         writer.InitDefaultState()
         # Then go through every instruction in the program and modify these state variables according to the Logo code
         if not self.RecurseAllInstructions(writer.SetStateFromInstruction):
-            return
+            return False
         # Now start the output of C++ code by writing global variable definitions
         GlobalInitCode = writer.WriteGlobals(self.GlobalVariables)
         if GlobalInitCode is None:
-            return
+            return False
         # Next, write the function definitions for the user-defined Logo procedures
         for proc in self.Procedures:
             writer.OutputText += "static "
             if not writer.WriteFunctionPrototype(proc):
-                return
+                return False
             writer.OutputText += ";\n"
         if len(self.Procedures) > 0:
             writer.OutputText += "\n"
@@ -157,13 +158,13 @@ class TT_App:
         writer.InitProcedure()
         for instruct in self.MainInstructions:
             if not writer.WriteInstruction(instruct, 1, True):
-                return
+                return False
         writer.OutputText += "}\n\n"
         # write out all the procedures
         for proc in self.Procedures:
             # start with the function definition and opening brace
             if not writer.WriteFunctionPrototype(proc):
-                return
+                return False
             writer.OutputText += "\n{\n"
             # then definitions and initialization of local variables
             LocalInitCode = ""
@@ -174,7 +175,7 @@ class TT_App:
                 LocalVars += 1
                 Code = writer.WriteVariableDefinition(var, 1)
                 if Code is None:
-                    return None
+                    return False
                 LocalInitCode += Code
             if LocalVars > 0:
                 writer.OutputText += "\n"
@@ -184,7 +185,7 @@ class TT_App:
             writer.InitProcedure()
             for instruct in proc.Instructions:
                 if not writer.WriteInstruction(instruct, 1, True):
-                    return
+                    return False
             writer.OutputText += "}\n\n"
         # Compilation done!  Write the logo source code and save the output text into the destination file
         writer.OutputText += "/***** The LOGO source code from which this file was compiled is given here *****/\n"
@@ -193,7 +194,7 @@ class TT_App:
         f = open(self.OutputName, 'w')
         f.write(writer.OutputText)
         f.close()
-
+        return True
 
     def DebugPrintCodeStructure(self):
         print "Main Code: %s\nMain Instructions:" % self.MainCode
