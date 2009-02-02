@@ -1,0 +1,46 @@
+; Fern, from: http://www.s193653721.websitehome.co.uk/logoarts/progs/fractals/fern.html
+
+.setspecial "windowsize 400
+.setspecial "framespersec 30
+
+Init Forever [ PenUp SetXY 0 -170 PenDown Fern 440 :fernangle :smallratio :bigratio Advance cs]
+
+To Hue :Angle
+  ; Green from 187 to 252
+  Make "Green 0.18*:Angle + 187
+  Output ( List 215 :Green 88 )
+End
+
+To Fern :Size :Angle :SmallScale :BigScale
+  If :Size < 3 [Stop]
+  SetPC Hue Heading
+  Forward :Size / 20
+  Left 80 Fern :Size * :SmallScale :Angle :SmallScale :BigScale
+  Right 80 + :Angle Forward :Size / 20
+  Right 80 Fern :Size * :SmallScale :Angle :SmallScale :BigScale
+  Left 80 - :Angle Fern :Size * :BigScale :Angle :SmallScale :BigScale
+  Left :Angle Back :Size / 20
+  Left :Angle Back :Size / 20
+End
+
+to Advance
+  make "fernangle :fernangle + :dangle
+  make "bigratio :bigratio + :dbig
+  make "smallratio :smallratio + :dsmall
+  ifelse :fernangle < -2 [make "fernangle -2 make "dangle 0] [if :fernangle > 2 [make "fernangle 2 make "dangle 0]]
+  ifelse :bigratio < 0.8 [make "bigratio 0.8 make "dbig 0] [if :bigratio > 0.9 [make "bigratio 0.9 make "dbig 0]]
+  ifelse :smallratio < 0.27 [make "smallratio 0.27 make "dsmall 0] [if :smallratio > 0.32 [make "smallratio 0.32 make "dsmall 0]]
+  make "dangle :dangle +  gaussian * 0.01
+  make "dbig :dbig + gaussian * 0.001
+  make "dsmall :dsmall + gaussian * 0.001
+end
+
+To Init
+  make "fernangle 2.0
+  make "bigratio 0.9
+  make "smallratio 0.3
+  make "dangle (-0.04 * (0.01 * random 100))
+  make "dbig 0
+  make "dsmall 0
+End
+
