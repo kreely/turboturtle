@@ -3,7 +3,7 @@
 .setspecial "windowsize 400
 .setspecial "framespersec 30
 
-Init Forever [ PenUp SetXY 0 -170 PenDown Fern 440 :fernangle :smallratio :bigratio Advance cs]
+Init Forever [ PenUp SetXY 0 -170 PenDown Fern 440 :fernangle :smallratio :bigratio Sliders Advance cs]
 
 To Hue :Angle
   ; Green from 187 to 252
@@ -13,7 +13,7 @@ End
 
 To Fern :Size :Angle :SmallScale :BigScale
   If :Size < 3 [Stop]
-  SetPC Hue Heading
+  SetPC Hue Heading SetPenSize 1.0
   Forward :Size / 20
   Left 80 Fern :Size * :SmallScale :Angle :SmallScale :BigScale
   Right 80 + :Angle Forward :Size / 20
@@ -31,8 +31,8 @@ to Advance
   ifelse :bigratio < 0.8 [make "bigratio 0.8 make "dbig 0] [if :bigratio > 0.9 [make "bigratio 0.9 make "dbig 0]]
   ifelse :smallratio < 0.27 [make "smallratio 0.27 make "dsmall 0] [if :smallratio > 0.32 [make "smallratio 0.32 make "dsmall 0]]
   make "dangle :dangle +  gaussian * 0.01
-  make "dbig :dbig + gaussian * 0.001
-  make "dsmall :dsmall + gaussian * 0.001
+  make "dbig :dbig + gaussian * 0.0003
+  make "dsmall :dsmall + gaussian * 0.0003
 end
 
 To Init
@@ -42,5 +42,23 @@ To Init
   make "dangle (-0.04 * (0.01 * random 100))
   make "dbig 0
   make "dsmall 0
+End
+
+To Sliders
+  DrawSlider -260 "Angle :fernangle -2.0 2.0
+  DrawSlider -230 "Big :bigratio 0.8 0.9
+  DrawSlider -200 "Small :smallratio 0.27 0.32
+End
+
+To DrawSlider :xpos :name :value :low :high 
+  make "width 25
+  make "height 80
+  make "bottom -180
+  make "level :bottom + :height * ((:value - :low) / (:high - :low))
+  PenUp SetXY :xpos+:width/2 :bottom-5 SetPC 7 SetPenSize 1.5 SetFontHeight 8 SetJustifyHorz 1 (label :name)
+  SetXY :xpos :bottom
+  PenDown SetX :xpos+:width SetX :xpos+(:width/2) SetY :bottom+:height SetX :xpos SetX :xpos+:width
+  SetPC 4 SetPenSize 2.0
+  PenUp SetXY :xpos :level SetPC 4 PenDown SetX :xpos + :width
 End
 
