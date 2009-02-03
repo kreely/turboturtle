@@ -25,6 +25,7 @@ CppHead = """
 #include <SDL_opengl.h>
 #include "wrapper_api.h"
 #include "wrapper_clist.h"
+#include "wrapper_pointtext.h"
 
 """
 
@@ -58,6 +59,7 @@ class CppWriter():
         self.LogoState.fFramesPerSec = 0.0
         self.LogoState.bUseScrunch = False
         self.LogoState.bUseWrap = False
+        self.LogoState.bNeedLabel = False
         self.LogoState.bNeedColors = False
         self.LogoState.bNeedRandom = False
         self.LogoState.bNeedGaussian = False
@@ -98,6 +100,8 @@ class CppWriter():
             self.LogoState.bNeedRandom = True
         elif pInstruct.Name.lower() == 'gaussian':
             self.LogoState.bNeedGaussian = True
+        elif pInstruct.Name.lower() in ('label', 'setfont', 'setfontheight', 'setjustifyvert', 'setjustifyhorz'):
+            self.LogoState.bNeedLabel = True
         return True
 
     # Write out the global variables for the CPP code
@@ -129,6 +133,10 @@ class CppWriter():
             self.OutputText += "%s tt_ScrunchXY[2] = {1.0, 1.0};\n" % self.LogoState.NumType
         if self.LogoState.bUseWrap:
             self.OutputText += "bool tt_UseWrap = false;\n"
+        if self.LogoState.bNeedLabel:
+            self.OutputText += "int tt_Font=0, tt_JustifyVert=0, tt_JustifyHorz=0;\n"
+            self.OutputText += "float tt_FontHeight=%f;\n" % float(self.LogoState.iWindowSize/25.0)
+            self.OutputText += "char tt_LabelText[1024];\n"
         self.OutputText += "\n"
         # then write out definitions for static functions which might be used by the logo code
         if self.LogoState.bNeedTowardsFunc:
@@ -272,13 +280,26 @@ class CppWriter():
         self.OutputText += text
         return True
 
+    def GetCppSafeString(self, instring):
+        instring = instring.replace("\\", "\\\\")
+        instring = instring.replace('"', '\\"')
+        return instring
+
     def GetCppArgument(self, Arg):
         CppText = ""
-        if Arg.ArgType == ParamType.QUOTEDWORD:
-            return '"' + Arg.Elements[0].Text[1:] + '"'
-        elif Arg.ArgType == ParamType.ARRAY:
+        if Arg.ArgType == ParamType.ARRAY:
             print "Internal error: Arrays not yet supported."
             return None
+        elif Arg.ArgType == ParamType.QUOTEDWORD:
+            if Arg.Elements[0].Type == ElemType.QUOTED_WORD:
+                return '"' + self.GetCppSafeString(Arg.Elements[0].Text[1:]) + '"'
+            elif Arg.Elements[0].Type == ElemType.VAR_VALUE:
+                return Arg.Elements[0].pVariable.CppName
+            elif Arg.Elements[0].Type == ElemType.FUNC_CALL:
+                return self.GetCppInstruction(Arg.Elements[0].pInstruct, 0, False)
+            else:
+                print "Internal error: invalid QUOTEDWORD element '%s' in GetCppArgument()" % elem.Text
+                return None
         elif Arg.ArgType == ParamType.LISTNUM:
             if Arg.Elements[0].Type == ElemType.NUMBER:
                 CppText += "CList<%s>(" % self.LogoState.NumType
@@ -513,6 +534,35 @@ class CppWriter():
             CppText += "(int) (%s)" % ArgText[0]
         elif pInstruct.pProc.FullName == "item":                            # ITEM
             CppText += "%s[(int) (%s)-1]" % (ArgText[1], ArgText[0])
+        elif pInstruct.pProc.FullName == "label":                           # LABEL
+            CppText += IndentText + "glEnd();\n"
+            CppText += IndentText + "sprintf(tt_LabelText, \""
+            bFirst = True
+            for arg in pInstruct.Arguments:
+                if bFirst is True:
+                    bFirst = False
+                else:
+                    CppText += " "
+                if arg.ArgType == ParamType.QUOTEDWORD or arg.ArgType == ParamType.BOOLEAN:
+                    CppText += "%s"
+                elif arg.ArgType == ParamType.NUMBER:
+                    CppText += "%g"
+                else:
+                    print "Syntax error: Invalid parameter type %i (%s) in LABEL instruction." % (arg.ArgType, ParamType.Names[arg.ArgType])
+                    return None
+            CppText += "\""
+            for i in range(len(pInstruct.Arguments)):
+                arg = pInstruct.Arguments[i]
+                CppText += ", "
+                if arg.ArgType == ParamType.QUOTEDWORD:
+                    CppText += ArgText[i]
+                elif arg.ArgType == ParamType.NUMBER:
+                    CppText += "(double) (%s)" % ArgText[i]
+                elif arg.ArgType == ParamType.BOOLEAN:
+                    CppText += '(%s) ? "True" : "False"' % ArgText[i]
+            CppText += ");\n"
+            CppText += IndentText + "DrawPointText(tt_Font, tt_JustifyVert, tt_JustifyHorz, tt_FontHeight, tt_TurtlePos[0], tt_TurtlePos[1], tt_LabelText);\n"
+            CppText += IndentText + "glBegin(GL_LINES);\n"
         elif pInstruct.pProc.FullName == "last":                            # LAST
             CppText += "%s.Last()" % ArgText[0]
         elif pInstruct.pProc.FullName == "left":                            # LEFT
@@ -628,6 +678,16 @@ class CppWriter():
             CppText += codetext
             CppText += IndentText + "if (tt_PenPaint == false)\n"
             CppText += IndentText + " " * self.IndentSize + "glColor3ubv(tt_ColorBackground);\n"
+        elif pInstruct.pProc.FullName == "setfont":                         # SETFONT
+            CppText += IndentText + "tt_Font = %s;\n" % ArgText[0]
+        elif pInstruct.pProc.FullName == "setfontheight":                   # SETFONTHEIGHT
+            CppText += IndentText + "tt_FontHeight = %s;\n" % ArgText[0]
+        elif pInstruct.pProc.FullName == "setheading":                      # SETHEADING
+            CppText += IndentText + "tt_TurtleDir = %s;\n" % ArgText[0]
+        elif pInstruct.pProc.FullName == "setjustifyvert":                  # SETJUSTIFYVERT
+            CppText += IndentText + "tt_JustifyVert = %s;\n" % ArgText[0]
+        elif pInstruct.pProc.FullName == "setjustifyhorz":                  # SETJUSTIFYHORZ
+            CppText += IndentText + "tt_JustifyHorz = %s;\n" % ArgText[0]
         elif pInstruct.pProc.FullName == "setpencolor":                     # SETPENCOLOR
             codetext = self.GetCppBuiltinSetColor(IndentText, pInstruct.Arguments[0], "tt_ColorPen")
             if codetext is None:
@@ -639,8 +699,6 @@ class CppWriter():
             CppText += IndentText + "glEnd();\n"
             CppText += IndentText + "glLineWidth(%s);\n" % ArgText[0]
             CppText += IndentText + "glBegin(GL_LINES);\n"
-        elif pInstruct.pProc.FullName == "setheading":                      # SETHEADING
-            CppText += IndentText + "tt_TurtleDir = %s;\n" % ArgText[0]
         elif pInstruct.pProc.FullName == "setpos":                          # SETPOS
             Arg = pInstruct.Arguments[0]
             elem0type = Arg.Elements[0].Type

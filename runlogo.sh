@@ -9,23 +9,25 @@ if [ ! -f $1 ]; then
 fi
 
 includedir=`pwd`
-cd "$destdir"
 
 cppname=$basename.cpp
 echo "Compiling $name to $cppname"
-"$includedir"/turboturtle.py $name $cppname
+"$includedir"/turboturtle.py "$destdir"/$name "$destdir"/$cppname
 if [ $? != 0 ]; then exit 2; fi
 
 objname=$basename.o
 echo "Compiling $cppname to $objname"
-g++ -o $objname -O3 -I/usr/include/SDL -I"$includedir" -c $cppname
+g++ -o "$destdir"/$objname -O3 -I/usr/include/SDL -I. -c "$destdir"/$cppname
 if [ $? != 0 ]; then exit 3; fi
 
 echo "Compiling wrapper code"
-g++ -o "$includedir"/wrapper.o -O3 -I/usr/include/SDL -I"$includedir" -c "$includedir"/wrapper_main.cpp
+g++ -o wrapper_main.o -O3 -I/usr/include/SDL -I. -c wrapper_main.cpp
+if [ $? != 0 ]; then exit 4; fi
+g++ -o wrapper_pointtext.o -O3 -I/usr/include/SDL -I. -c wrapper_pointtext.cpp
+if [ $? != 0 ]; then exit 4; fi
+g++ -o wrapper_fontdata.o -O3 -c wrapper_fontdata.cpp
 if [ $? != 0 ]; then exit 4; fi
 
-exename="$includedir"/$basename
-echo "Linking wrapper code with $objname to produce executable $exename."
-g++ -o $exename -lSDL -lGL -lm $objname "$includedir"/wrapper.o
+echo "Linking wrapper code with $objname to produce executable $basename."
+g++ -o $basename -lSDL -lGL -lm "$destdir"/$objname wrapper_main.o wrapper_fontdata.o wrapper_pointtext.o
 

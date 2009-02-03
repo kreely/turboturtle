@@ -483,7 +483,7 @@ class TT_App:
                     if proc.bParenthesized and proc.bExtraArgs:
                         lastargtype = proc.ParamTypes[proc.nParams-1]
                         for i in range(proc.nParams, pInstruct.nParams):
-                            if pInstruct.Arguments[i].ArgType != lastargtype:
+                            if pInstruct.Arguments[i].ArgType != lastargtype and lastargtype != ParamType.ANYTHING:
                                 print "Syntax error: parenthesized instruction '%s' requires all extra arguments to be type '%s'" % (pInstruct.Name, ParamType.Names[lastargtype])
                                 return None
                     # we found a match!

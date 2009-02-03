@@ -10,6 +10,7 @@ To Init
   Make "StepA Pick [0 2 3 4]
   Make "StepB Pick [-3 -2 1 2 3 4]
   Make "Offset 15*Random 9
+  PenUp SetXY -198 198 SetPC 7 (Label "Loom :StepA :StepB :Offset)
 End
 
 To Loom :StepA :StepB :Offset

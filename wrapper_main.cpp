@@ -15,13 +15,16 @@
 #include <SDL_opengl.h>
 #include "wrapper_api.h"
 
-// global variables
+// static global variables
 static bool bRunning = true;
 static bool bFullscreen = false;
 static bool bReturnWhenDone = false;
 static int iScreenWidth = 512;
 static int iScreenHeight = 512;
 static unsigned int uiClockFrameStart;
+
+// real global variables
+float fPixelsPerTurtleStep = 0.0;
 
 // static functions
 static bool ParseArgs(int argc, void *argv[]);
@@ -220,11 +223,13 @@ bool InitGL(void)
     int iViewWidth, iViewHeight;
     if (iScreenWidth <= iScreenHeight)
     {
+        fPixelsPerTurtleStep = (float) iScreenWidth / (float) tt_WindowSize;
         iViewWidth = tt_WindowSize;
         iViewHeight = iScreenHeight * tt_WindowSize / iScreenWidth;
     }
     else
     {
+        fPixelsPerTurtleStep = (float) iScreenHeight / (float) tt_WindowSize;
         iViewHeight = tt_WindowSize;
         iViewWidth = iScreenWidth * tt_WindowSize / iScreenHeight;
     }
