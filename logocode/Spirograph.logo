@@ -6,6 +6,9 @@
 Forever [Rand2 Spir ClearScreen]
 
 To Spir
+  SetPC 7 PenUp
+  SetPos [-190 200] SetJustifyVert 0 (Label "Spirograph)
+  SetPos [-190 -200] SetJustifyVert 2 (Label "A= :A "B= :B)
   For [S 10 70 5] [
   PenUp SetPos XYCurve :S 0 PenDown SetPC AngCol :S+10*:B
   For [T 1 360] [SetPos XYCurve :S :T]]
