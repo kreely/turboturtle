@@ -414,6 +414,7 @@ class TT_App:
     # Check an instruction for any arguments using values stored in variables
     # Make sure that the variable names are defined (ie, there is no missing MAKE/LOCALMAKE)
     # Add references to the Variable object into elements with type VAR_VALUE
+    # Check for MAKE instruction which writes to a global variable with the same name as a local variable
     def CheckVariables(self, Instruct, pCodeProc):
         if pCodeProc is None:
             ErrProcName = 'global'
@@ -434,6 +435,11 @@ class TT_App:
                         continue
                     print "Syntax error: variable '%s' in procedure '%s' is not defined (no MAKE instruction)" % (varname, ErrProcName)
                     return False
+        if pCodeProc is not None and Instruct.Name.lower() == "make":
+            localvars = [ var for var in pCodeProc.LocalVariables if var.Name.lower() == Instruct.pMakeVar.Name.lower() ]
+            if len(localvars) > 0:
+              print "Logical error: MAKE instruction for variable '%s' in procedure '%s' writes to global, but there is a local variable with the same name" % (Instruct.pMakeVar.Name.lower(), ErrProcName)
+              return False
         return True
 
     # this is used to find any OUTPUT instructions in a procedure, which means that the procedure returns a value
