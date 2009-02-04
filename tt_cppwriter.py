@@ -450,6 +450,8 @@ class CppWriter():
                 CppText += IndentText + "} while (!(%s));\n" % ArgText[1]
         elif pInstruct.pProc.FullName == "emptyp":                          # EMPTYP
             CppText += "%s.Length() == 0" % ArgText[0]
+        elif pInstruct.pProc.FullName == "erasescreen":                     # ERASESCREEN
+            CppText += IndentText + "wrapper_Erase();\n"
         elif pInstruct.pProc.FullName == "exp":                             # EXP
             CppText += "exp%s(%s)" % (NumTypeMath, ArgText[0])
         elif pInstruct.pProc.FullName == "first":                           # FIRST

@@ -15,6 +15,7 @@ extern unsigned char tt_ColorBackground[];
 
 // Functions in the OpenGL wrapper
 void wrapper_Clean(void);
+void wrapper_Erase(void);
 void wrapper_DrawLineSegment(float *pfOrigPos, float *pfNewPos, bool bWrapEnabled);
 void wrapper_DrawLineSegment(double *pdOrigPos, double *pdNewPos, bool bWrapEnabled);
 

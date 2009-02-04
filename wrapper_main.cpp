@@ -292,6 +292,19 @@ void wrapper_Clean(void)
     return;
 }
 
+void wrapper_Erase(void)
+{
+    // paint the background and set up for drawing lines
+    glEnd();
+    glClearColor(tt_ColorBackground[0]/255.0, tt_ColorBackground[1]/255.0, tt_ColorBackground[2]/255.0, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBegin(GL_LINES);
+
+    // exit program if exit key was pressed
+    if (CheckExitKey())
+        exit(0);
+}
+
 void wrapper_DrawLineSegment(float *pfOrigPos, float *pfNewPos, bool bWrapEnabled)
 {
 }
