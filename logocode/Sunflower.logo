@@ -1,0 +1,21 @@
+; Sunflower, from: http://www.s193653721.websitehome.co.uk/logoarts/progs/polar/sunflower.html
+
+.setspecial "windowsize 400
+
+New
+For [Angle 200 90000 222.5] [         ; 222.5=360/1.618 Also try 445
+  Make "Radius 0.6 * Power :Angle 0.5
+  Home SetHeading :Angle Forward :Radius
+  DrawSeed]
+
+To New
+  SetBG 0 SetPC 2 PenUp
+End
+
+To DrawSeed  
+  Left 45 SetPC 6
+  PenDown Repeat 4 [Back 7 Right 90] PenUp
+  PenDown SetPC 2 Right 45 Forward 6 PenUp        ; thin lines
+End
+
+
