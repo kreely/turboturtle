@@ -1,0 +1,35 @@
+; Tree Generator, from: http://www.s193653721.websitehome.co.uk/logoarts/progs/trees/tree3.html
+
+.setspecial "windowsize 400
+
+Forever [New Back 160 PenDown Tree 80 ClearScreen Wait 200]
+
+To New
+  SetBG 0 SetPC 6 PenUp
+End
+
+To TreeCol :Length
+  Make "Green Round 2.5*(100-:Length)        ; green depends on length
+  Output ( List 255 :Green 0 )               ; red set to 255 and blue to 0
+End
+
+To Tree :Length
+  If :Length< 10 [Blossom Stop]         ; ends recursion if branch too small
+  SetPenSize :Length/9                  ; reduce pen width as branch length gets smaller
+  SetPC TreeCol :Length                 ; branch color depends on length
+  LocalMake "Angle Pick [24 32 40 48 56 64 72]
+  LocalMake "TreeAngle :Angle*Pick [0.25 0.375 0.5 0.625 0.75]
+  Forward :Length
+  Left :TreeAngle
+  Tree :Length * Pick [0.7 0.75 0.8] Right :Angle
+  Tree :Length * Pick [0.7 0.75 0.8] Left :Angle
+  Right :TreeAngle
+  PenUp Back :Length PenDown        ; return to starting point
+End
+
+To Blossom
+  Make "myHeading Heading
+  SetPC 2 SetHeading 180
+  Forward 5 Back 5 SetHeading :myHeading
+End
+

@@ -1,0 +1,66 @@
+; Wander Curves, from: http://www.s193653721.websitehome.co.uk/logoarts/progs/wand/wandhappyopt.html
+
+.setspecial "windowsize 400
+
+Make "IALIST [ 1  1  1  1  1  5 10 10 11 11 11 11 12 21 21 22 22 25 25 25 25 25 31 31 31 31 33 34 40 41 43 73]
+Make "SALIST [20 21 30 51 52 33 27 80 32 53 66 80 80 20 44 21 25 27 33 51 57 63 30 32 33 39 44 70 30  5 57 100]
+
+forever [ repeat count :IALIST [ Go Item # :IALIST Item # :SALIST CS Wait 200 ] ]
+
+To Go :IA :SA
+  SetPC 15
+  Make "LL 15         ; default line length
+  Make "CY Cycles :IA :SA :LL
+  Fit2Screen :IA :SA :LL :CY
+  Home Display :IA :SA :LengthNew :CY
+  SetXY :Xcent :Ycent SetHeading 0 PenDown
+  ;Circle 2         ; circle starting position
+  Repeat :CY [SetPC AngCol Forward :LengthNew Right :IA LocalMake "IA :IA+:SA]
+End 
+
+To Cycles :IA2 :SA :LL
+  Make "AX XCor
+  Make "AY YCor
+  PenUp Repeat 720 [
+  Forward :LL Right :IA2 LocalMake "IA2 :IA2+:SA
+  If (And (abs XCor-:AX) < 1 (abs YCor-:AY) < 1 (abs Heading) < 1)         ; if returned to start
+  [Output RepCount] ]
+  Output 720         ; curve never closed
+End
+
+To Fit2Screen :IA :SA :LL :CY
+  Make "IA3 :IA
+  PenUp Home
+  Make "Xmax 0 Make "Xmin 0
+  Make "Ymax 0 Make "Ymin 0
+  Repeat :CY [Forward :LL Right :IA3 Make "IA3 :IA3+:SA
+  If (Item 1 Pos) > :Xmax [Make "Xmax Item 1 Pos]
+  If (Item 1 Pos) < :Xmin [Make "Xmin Item 1 Pos]
+  If (Item 2 Pos) > :Ymax [Make "Ymax Item 2 Pos]
+  If (Item 2 Pos) < :Ymin [Make "Ymin Item 2 Pos] ]
+  Make "Xsize :Xmax + Abs :Xmin
+  Make "Ysize :Ymax + Abs :Ymin
+  IfElse :Xsize>:Ysize [Make "Size :Xsize] [Make "Size :Ysize]
+  Make "Scale 360/:Size
+  Make "LengthNew :LL*:Scale
+  If (Abs :Scale - 1) > 0.1 [Fit2Screen :IA :SA :LengthNew :CY stop]
+  Make "Xcent Minus Round (:Xmax + :Xmin) / 2
+  Make "Ycent Minus Round (:Ymax + :Ymin) / 2
+End
+
+To Display :IA :SA :LineLength :CY
+  Home SetPC 7 SetJustifyVert 1
+  SetPos [-192 184] (Label "Happy "Wanderer)
+  SetPos [74 184] (Label "Initial "Angle :IA)
+  SetPos [94 168] (Label "Step "Angle :SA)
+  SetPos [-192 -176] (Label "Steps :CY)
+  SetPos [-192 -190] (Label "Line "Length Round :LineLength)
+  SetPos [80 -190] (Label "Centre :Xcent :Ycent)
+End
+
+To AngCol
+  Make "Red 255*Sin Heading/2
+  Output ( List :Red 255 0 )
+End
+
+

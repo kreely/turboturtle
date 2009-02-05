@@ -1,0 +1,76 @@
+; Flowers, from: http://www.s193653721.websitehome.co.uk/logoarts/progs/art/flowers.html
+
+.setspecial "windowsize 400
+
+New Back 150
+Base Bunch
+
+To New
+  SetBG 0 SetPC 7 PenUp
+End
+
+To Arch
+  ; draw single 90 degree arc
+  Repeat 18 [Forward 4 Right 5]
+End
+
+To Oval
+  ; draw single oval shape (tp)
+  Left 45 Arch Right 90
+  Arch Right 135
+End
+
+To Base
+  ; draw single base (tp)
+  Right 90 Back 30 PenDown
+  SetPC 15 Oval
+  PenUp Forward 30 Left 90
+End
+
+To Leaf
+  ; draw single leaf (tp)
+  SetPC 2
+  Forward 24 Oval Back 24
+End
+
+To Section
+  ; draw short stem and 2 leaves
+  Right 45 Leaf Left 45 Forward 24
+  Left 45 Leaf Right 45 Forward 24
+End
+
+	
+To Stem
+  ; draw 3 sections
+  SetPC 2 Forward 48
+  Repeat 3 [Section]
+  PenUp Forward 64 PenDown
+End
+
+To Petal
+  ; draw single petal (tp)
+  SetPC 4 Oval
+End
+
+To Flower
+  ; draw flower head (tp)
+  Repeat 18 [
+  SetPC 6 Forward 4
+  Petal
+  PenUp Back 4 PenDown
+  Right 20]
+End
+
+To Plant
+  ; draw flower (tp)
+  Stem Flower
+  PenUp Back 256 PenDown
+End
+
+To Bunch
+  ; draw 3 flowers
+  Left 24 PenDown
+  Repeat 3 [Plant Right 24]
+End
+
+
