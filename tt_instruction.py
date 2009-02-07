@@ -16,7 +16,7 @@ class Argument:
         self.ArgType = ParamType.UNKNOWN
         self.Elements = []
 
-    def ParseFromCodeElements(self, InstructName, CodeElements, ProcName, Procedures):
+    def ParseFromCodeElements(self, InstructName, CodeElements, ProcName, Procedures, bNoExpression=False):
         ErrProcName = ProcName or 'global'
         if len(CodeElements) < 1:
             print "Synatx Error: missing arguments for '%s' instruction in procedure '%s'" % (InstructName, ErrProcName)
@@ -145,6 +145,8 @@ class Argument:
                 continue
             if CodeElements[0][0] != ElemType.INFIX_BOOL and CodeElements[0][0] != ElemType.INFIX_NUM:
                 break
+            if bNoExpression:
+                break
         # check parenthesis depth
         if parenDepth != 0:
             print "Syntax error: Expression ended with unclosed parenthesis in procedure '%s'.  Missing operator or closing parenthesis?" % ErrProcName
@@ -271,7 +273,13 @@ class Instruction:
         self.bExtraArgs = bExtraArgs
         self.Arguments = [ ]
 
-    def GetArguments(self, CodeElements, ProcName, Procedures):
+    # the bFinalArgSingleton parameter tells us if the last argument in this procedure/instruction call is
+    # a list or a quotedword, and thus cannot be part of an expression.  This resolves an ambiguity with instructions
+    # like "instruct :arg1 :arg2 + 42".  Since the type of arg2 is not yet known, this can be interpreted
+    # either as "(instruct :arg1 :arg2) + 42" or "instruct :arg1 (:arg2 + 42)".  The second interpretation is the
+    # default behavior and will cause an error later if :arg2 turns out to be a list.  By giving the parser a 'hint'
+    # about the type of :arg2, we can avoid this error by telling the parser to stop at infix operators
+    def GetArguments(self, CodeElements, ProcName, Procedures, bFinalArgSingleton=False):
         # first, handle special case instructions
         if self.Name.lower() == "for":
             return self.HandleSpecial_for(CodeElements, ProcName, Procedures)
@@ -289,7 +297,8 @@ class Instruction:
         # we do know how many arguments will be given to this instruction, so only take that many
         for i in range(self.nParams):
             newarg = Argument()
-            if not newarg.ParseFromCodeElements(self.Name, CodeElements, ProcName, Procedures):
+            bNoExpression = (i == self.nParams - 1) and bFinalArgSingleton
+            if not newarg.ParseFromCodeElements(self.Name, CodeElements, ProcName, Procedures, bNoExpression):
                 return False
             self.Arguments.append(newarg)
         return True

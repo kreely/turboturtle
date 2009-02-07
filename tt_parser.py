@@ -240,8 +240,11 @@ class Parser:
         builtinlist = [ proc for proc in Builtin._procs if proc.FullName == InstructName.lower() or proc.AbbrevName == InstructName.lower() ]
         if len(builtinlist) > 0:
             Instruct = Instruction(InstructName, True, builtinlist[0].nParams, False, False)
-            if not Instruct.GetArguments(CodeElements, ProcName, Procedures):
-                return None
+            if builtinlist[0].nParams > 0:
+                FinalArgType = builtinlist[0].ParamTypes[-1]
+                bFinalArgSingleton = FinalArgType == ParamType.LISTNUM or FinalArgType == ParamType.LISTCODE or FinalArgType == ParamType.QUOTEDWORD
+                if not Instruct.GetArguments(CodeElements, ProcName, Procedures, bFinalArgSingleton):
+                    return None
         else:
             proclist = [ proc for proc in Procedures if proc.Name.lower() == InstructName.lower() ]
             if len(proclist) > 0:
