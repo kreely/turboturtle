@@ -796,60 +796,42 @@ class CppWriter():
         elif pInstruct.pProc.FullName == "setpos":                          # SETPOS
             Arg = pInstruct.Arguments[0]
             elem0type = Arg.Elements[0].Type
-            CppText += IndentText + "if (tt_PenDown)\n"
-            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
+            UpdateTurtle = ""
             if elem0type == ElemType.NUMBER:
                 if len(Arg.Elements) != 2:
                     print "Syntax error: SETPOS instruction takes an immediate list with exactly 2 numbers, but %i were given." % len(Arg.Elements)
                     return None
                 for i in range(2):
-                    CppText += IndentText + "tt_TurtlePos[%i] = %s;\n" % (i, Arg.Elements[i].Text)
+                    UpdateTurtle += NextIndent + "tt_TurtlePos[%i] = %s;\n" % (i, Arg.Elements[i].Text)
             elif elem0type == ElemType.VAR_VALUE:
-                CppText += IndentText + "tt_TurtlePos[0] = %s[0];\n" % (Arg.Elements[0].pVariable.CppName)
-                CppText += IndentText + "tt_TurtlePos[1] = %s[1];\n" % (Arg.Elements[0].pVariable.CppName)
+                UpdateTurtle += NextIndent + "tt_TurtlePos[0] = %s[0];\n" % (Arg.Elements[0].pVariable.CppName)
+                UpdateTurtle += NextIndent + "tt_TurtlePos[1] = %s[1];\n" % (Arg.Elements[0].pVariable.CppName)
             elif elem0type == ElemType.FUNC_CALL:
                 my_temp = self.LogoState.TempIdx
                 self.LogoState.TempIdx += 1
                 codetext = self.GetCppInstruction(Arg.Elements[0].pInstruct, 0, False)
                 if codetext is None:
                     return None
-                CppText += IndentText + "CList<%s> templist%02i = %s;\n" % (self.LogoState.NumType, my_temp, codetext)
-                CppText += IndentText + "tt_TurtlePos[0] = templist%02i[0];\n" % my_temp
-                CppText += IndentText + "tt_TurtlePos[1] = templist%02i[1];\n" % my_temp
+                UpdateTurtle += NextIndent + "CList<%s> templist%02i = %s;\n" % (self.LogoState.NumType, my_temp, codetext)
+                UpdateTurtle += NextIndent + "tt_TurtlePos[0] = templist%02i[0];\n" % my_temp
+                UpdateTurtle += NextIndent + "tt_TurtlePos[1] = templist%02i[1];\n" % my_temp
             else:
                 print "Internal error: invalid element type %i '%s' in a List argument for SETPOS." % (elem0type, ElemType.Names[elem0type])
                 return None
-            CppText += IndentText + "if (tt_PenDown)\n"
-            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
+            CppText += self.GetCppBuiltinJump(IndentText, UpdateTurtle)
         elif pInstruct.pProc.FullName == "setscrunch":                      # SETSCRUNCH
             CppText += IndentText + "tt_ScrunchXY[0] = %s;\n" % ArgText[0]
             CppText += IndentText + "tt_ScrunchXY[1] = %s;\n" % ArgText[1]
         elif pInstruct.pProc.FullName == "setxy":                           # SETXY
-            CppText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
-            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
-            CppText += NextIndent + "tt_TurtlePos[0] = %s;\n" % ArgText[0]
-            CppText += NextIndent + "tt_TurtlePos[1] = %s;\n" % ArgText[1]
-            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
-            CppText += IndentText + "}\n" + IndentText + "else\n" + IndentText + "{\n"
-            CppText += NextIndent + "tt_TurtlePos[0] = %s;\n" % ArgText[0]
-            CppText += NextIndent + "tt_TurtlePos[1] = %s;\n" % ArgText[1]
-            CppText += IndentText + "}\n"
+            UpdateTurtle =  NextIndent + "tt_TurtlePos[0] = %s;\n" % ArgText[0]
+            UpdateTurtle += NextIndent + "tt_TurtlePos[1] = %s;\n" % ArgText[1]
+            CppText += self.GetCppBuiltinJump(IndentText, UpdateTurtle)
         elif pInstruct.pProc.FullName == "setx":                            # SETX
-            CppText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
-            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
-            CppText += NextIndent + "tt_TurtlePos[0] = %s;\n" % ArgText[0]
-            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
-            CppText += IndentText + "}\n" + IndentText + "else\n" + IndentText + "{\n"
-            CppText += NextIndent + "tt_TurtlePos[0] = %s;\n" % ArgText[0]
-            CppText += IndentText + "}\n"
+            UpdateTurtle = NextIndent + "tt_TurtlePos[0] = %s;\n" % ArgText[0]
+            CppText += self.GetCppBuiltinJump(IndentText, UpdateTurtle)
         elif pInstruct.pProc.FullName == "sety":                            # SETY
-            CppText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
-            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
-            CppText += NextIndent + "tt_TurtlePos[1] = %s;\n" % ArgText[0]
-            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
-            CppText += IndentText + "}\n" + IndentText + "else\n" + IndentText + "{\n"
-            CppText += NextIndent + "tt_TurtlePos[1] = %s;\n" % ArgText[0]
-            CppText += IndentText + "}\n"
+            UpdateTurtle = NextIndent + "tt_TurtlePos[1] = %s;\n" % ArgText[0]
+            CppText += self.GetCppBuiltinJump(IndentText, UpdateTurtle)
         elif pInstruct.pProc.FullName == "sin":                             # SIN
             CppText += "sin%s((%s) * tt_RadDegree)" % (NumTypeMath, ArgText[0])
         elif pInstruct.pProc.FullName == "sqrt":                            # SQRT
@@ -946,6 +928,29 @@ class CppWriter():
             if len(Arg.Elements) > 1:
                 ArgText = "(" + ArgText + ")"
             CppText = IndentText + "*((int *)%s) = *((int *) tt_Colors[(int) (%s) & 15]);\n" % (DestColorArray, ArgText)
+        return CppText
+
+    def GetCppBuiltinJump(self, IndentText, UpdateTurtleText):
+        NextIndent = IndentText + " " * self.IndentSize
+        NumTypeGL = self.LogoState.NumType[0]
+        CppText = ""
+        # write code to draw the line
+        if self.LogoState.bUseWrap:
+            CppText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
+            CppText += NextIndent + "%s NewPos[2];\n" % self.LogoState.NumType
+            CppText += UpdateTurtleText.replace('tt_TurtlePos', 'NewPos')
+            CppText += NextIndent + "wrapper_DrawLineSegment(tt_TurtlePos, NewPos, tt_UseWrap);\n"
+            CppText += NextIndent + "tt_TurtlePos[0] = NewPos[0];\n" + NextIndent + "tt_TurtlePos[1] = NewPos[1];\n"
+            CppText += IndentText + "} else {\n"
+        else:
+            CppText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
+            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
+            CppText += UpdateTurtleText
+            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
+            CppText += IndentText + "} else {\n"
+        # write code for the PenUp case
+        CppText += UpdateTurtleText
+        CppText += IndentText + "}\n"
         return CppText
 
     def GetCppBuiltinMove(self, IndentText, Arg, DirSign):
