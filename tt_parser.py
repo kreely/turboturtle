@@ -242,7 +242,7 @@ class Parser:
             Instruct = Instruction(InstructName, True, builtinlist[0].nParams, False, False)
             if builtinlist[0].nParams > 0:
                 FinalArgType = builtinlist[0].ParamTypes[-1]
-                bFinalArgSingleton = FinalArgType == ParamType.LISTNUM or FinalArgType == ParamType.LISTCODE or FinalArgType == ParamType.QUOTEDWORD
+                bFinalArgSingleton = FinalArgType in (ParamType.ARRAY, ParamType.LISTNUM, ParamType.LISTCODE, ParamType.QUOTEDWORD)
                 if not Instruct.GetArguments(CodeElements, ProcName, Procedures, bFinalArgSingleton):
                     return None
         else:
