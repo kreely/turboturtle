@@ -25,6 +25,7 @@ CppHead = """
 #include <SDL_opengl.h>
 #include "wrapper_api.h"
 #include "wrapper_clist.h"
+#include "wrapper_carray.h"
 #include "wrapper_pointtext.h"
 
 """
@@ -110,7 +111,7 @@ class CppWriter():
         NumTypeMath = ""
         if self.LogoState.NumType == 'float':
             NumTypeMath = "f"
-        self.OutputText += "// Static data, only used by code in this source file\n"
+        self.OutputText += "// Static TurboTurtle data, only used by code in this source file\n"
         # start by writing the special TurboTurtle variables
         self.OutputText += "static const %s tt_DegreeRad = 180.0 / 3.141592653589793;\n" % self.LogoState.NumType
         self.OutputText += "static const %s tt_RadDegree = 3.141592653589793 / 180.0;\n" % self.LogoState.NumType
@@ -121,7 +122,7 @@ class CppWriter():
         self.OutputText += "static bool tt_PenDown = true;\n"
         self.OutputText += "static bool tt_PenPaint = true;\n"
         self.OutputText += "static bool tt_TestValue = false;\n"
-        self.OutputText += "\n// Global data, also readable and writable by the wrapper\n"
+        self.OutputText += "\n// Global TurboTurtle data, also readable and writable by the wrapper\n"
         self.OutputText += "float tt_FramesPerSec = %f;\n" % self.LogoState.fFramesPerSec
         self.OutputText += "int tt_LineSmooth = %i;\n" % self.LogoState.iLineSmooth
         self.OutputText += "int tt_WindowSize = %i;\n" % self.LogoState.iWindowSize
@@ -165,11 +166,14 @@ class CppWriter():
             self.OutputText += IndentText + "return u1;\n}\n\n"
         # generate a string of C++ definitions for the Logo program's global variables
         InitCode = ""
-        for var in GlobalVariables:
-            Code = self.WriteVariableDefinition(var, 0)
-            if Code is None:
-                return None
-            InitCode += Code
+        if len(GlobalVariables) > 0:
+            self.OutputText += "// Global variable definitions for Logo program\n"
+            for var in GlobalVariables:
+                Code = self.WriteVariableDefinition(var, 0)
+                if Code is None:
+                    return None
+                InitCode += Code
+            self.OutputText += "\n"
         # add any extra program initialization code to run at the beginning of tt_LogoMain()
         if self.LogoState.bNeedRandom:
             InitCode += IndentText + "srand((unsigned int) time(NULL));\n"
@@ -191,7 +195,7 @@ class CppWriter():
                 self.OutputText += ", "
             else:
                 bFirst = False
-            if not self.WriteVarType(var.Type):
+            if not self.WriteVarType(var.Type, var.ArrayDim):
                 return False
             self.OutputText += " " + var.CppName
         self.OutputText += ")"
@@ -202,7 +206,7 @@ class CppWriter():
         InitCode = ""
         # write leading white space, the variable's C++ type, and name
         self.OutputText += " " * (iIndent * self.IndentSize)
-        if not self.WriteVarType(Var.Type):
+        if not self.WriteVarType(Var.Type, Var.ArrayDim):
             return None
         self.OutputText += " " + Var.CppName
         # next write initialization code
@@ -210,15 +214,12 @@ class CppWriter():
             self.OutputText += " = false;\n"
         elif Var.Type == ParamType.NUMBER:
             self.OutputText += " = 0.0;\n"
-        elif Var.Type == ParamType.LISTNUM:
+        elif Var.Type in (ParamType.LISTNUM, ParamType.ARRAY):
             self.OutputText += ";\n"
-        elif Var.Type == ParamType.ARRAY:
-            print "Internal error: Arrays not yet supported."
-            return None
         elif Var.Type == ParamType.QUOTEDWORD:
             self.OutputText += ' = "";\n'
         else:
-            print "Internal error: invalid variable type %i in WriteVarType()" % Var.Type
+            print "Internal error: invalid variable type %i in WriteVariableDefinition()" % Var.Type
             return None
         return InitCode
 
@@ -251,7 +252,7 @@ class CppWriter():
 # Functions only for internal use by tt_cppwriter.py
 #------------------------------------------------------------------------
 
-    def WriteVarType(self, Type):
+    def WriteVarType(self, Type, ArrayDim=None):
         if Type == ParamType.NOTHING:
             self.OutputText += "void"
             return True
@@ -265,8 +266,8 @@ class CppWriter():
             self.OutputText += "CList<%s>" % self.LogoState.NumType
             return True
         elif Type == ParamType.ARRAY:
-            print "Internal error: Arrays not yet supported."
-            return False
+            self.OutputText += "CArray<%s,%i>" % (self.LogoState.NumType, ArrayDim or 2)
+            return True
         elif Type == ParamType.QUOTEDWORD:
             self.OutputText += "const char *"
             return True
@@ -288,8 +289,13 @@ class CppWriter():
     def GetCppArgument(self, Arg):
         CppText = ""
         if Arg.ArgType == ParamType.ARRAY:
-            print "Internal error: Arrays not yet supported."
-            return None
+            if Arg.Elements[0].Type == ElemType.VAR_VALUE:
+                return Arg.Elements[0].pVariable.CppName
+            elif Arg.Elements[0].Type == ElemType.FUNC_CALL:
+                return self.GetCppInstruction(Arg.Elements[0].pInstruct, 0, False)
+            else:
+                print "Internal error: invalid ARRAY element '%s' in GetCppArgument()" % elem.Text
+                return None
         elif Arg.ArgType == ParamType.QUOTEDWORD:
             if Arg.Elements[0].Type == ElemType.QUOTED_WORD:
                 return '"' + self.GetCppSafeString(Arg.Elements[0].Text[1:]) + '"'
@@ -315,18 +321,14 @@ class CppWriter():
                     CppText += "%i" % len(Arg.Elements)
                     for elem in Arg.Elements:
                         CppText += ", (double) %s" % elem.Text
-                CppText += ")"
+                return CppText + ")"
             elif Arg.Elements[0].Type == ElemType.VAR_VALUE:
-                CppText += Arg.Elements[0].pVariable.CppName
+                return Arg.Elements[0].pVariable.CppName
             elif Arg.Elements[0].Type == ElemType.FUNC_CALL:
-                codetext = self.GetCppInstruction(Arg.Elements[0].pInstruct, 0, False)
-                if codetext is None:
-                    return None
-                CppText += codetext
+                return self.GetCppInstruction(Arg.Elements[0].pInstruct, 0, False)
             else:
                 print "Internal error: invalid LISTNUM element '%s' in GetCppArgument()" % elem.Text
                 return None
-            return CppText
         elif Arg.ArgType in (ParamType.NUMBER, ParamType.BOOLEAN):
             lastelem = None
             for elem in Arg.Elements:
@@ -366,6 +368,43 @@ class CppWriter():
             print "Internal error: invalid argument type %i in GetCppArgument()" % Arg.ArgType
             return None
         return None # should never reach this point
+
+    # this is used for MDARRAY, MDITEM, and MDSETITEM instructions, to generate argument list for call to CArray object
+    def GetCppListnumExpansion(self, Arg, Count, InstructName):
+        CppText = ""
+        if Arg.Elements[0].Type == ElemType.NUMBER:
+            if len(Arg.Elements) != Count:
+                print "Syntax error: %s instruction expects input list with %i dimensions, but %i given" % (InstructName, Count, len(Arg.Elements))
+                return None
+            for i in range(Count):
+                if i != 0:
+                    CppText += ", "
+                CppText += "%i" % int(Arg.Elements[i].Text)
+            return CppText
+        elif Arg.Elements[0].Type == ElemType.VAR_VALUE:
+            for i in range(Count):
+                if i != 0:
+                    CppText += ", "
+                CppText += "(int) %s[%i]" % (Arg.Elements[0].pVariable.CppName, i)
+            return CppText
+        elif Arg.Elements[0].Type == ElemType.FUNC_CALL:
+            if Arg.Elements[0].pInstruct.Name.lower() != "list":
+                print "Internal error: non-LIST function call in LISTNUM expansion"
+                return None
+            listinstruct = Arg.Elements[0].pInstruct
+            if len(listinstruct.Arguments) != Count:
+                print "Syntax error: %s instruction expects input list with %i dimensions, but %i given" % (InstructName, Count, len(listinstruct.Arguments))
+                return None
+            for i in range(Count):
+                if i != 0:
+                    CppText += ", "
+                cpparg = self.GetCppArgument(listinstruct.Arguments[i])
+                if cpparg is None:
+                    return None
+                CppText += "(int) (%s)" % cpparg
+            return CppText
+        print "Internal error: invalid element type '%s' in GetCppListnumExpansion" % ElemType.Names[Arg.Elements[0].Type]
+        return None
 
     def GetCppUserInstruction(self, pInstruct, iIndent):
         cpptext = " " * (iIndent * self.IndentSize)
@@ -418,6 +457,13 @@ class CppWriter():
                 CppText += "atan%s(%s) * tt_DegreeRad" % (NumTypeMath, ArgText[0])
             else:
                 CppText += "atan2%s(%s, %s) * tt_DegreeRad" % (NumTypeMath, ArgText[1], ArgText[0])
+        elif pInstruct.pProc.FullName == "array":                           # ARRAY
+            CppText += "CArray<%s,1>(" % self.LogoState.NumType
+            if len(pInstruct.Arguments) == 1:
+                CppText += "(int) (%s), 1" % ArgText[0]
+            else:
+                CppText += "(int) (%s), (int) (%s)" % (ArgText[0], ArgText[1])
+            CppText += ")"
         elif pInstruct.pProc.FullName == "back":                            # BACK
             return self.GetCppBuiltinMove(IndentText, pInstruct.Arguments[0], "-")
         elif pInstruct.pProc.FullName == "butfirst":                        # BUTFIRST
@@ -535,7 +581,10 @@ class CppWriter():
         elif pInstruct.pProc.FullName == "int":                             # INT
             CppText += "(int) (%s)" % ArgText[0]
         elif pInstruct.pProc.FullName == "item":                            # ITEM
-            CppText += "%s[(int) (%s)-1]" % (ArgText[1], ArgText[0])
+            if pInstruct.Arguments[1].ArgType == ParamType.LISTNUM:
+                CppText += "%s[(int) (%s)-1]" % (ArgText[1], ArgText[0])
+            elif pInstruct.Arguments[1].ArgType == ParamType.ARRAY:
+                CppText += "%s.Get((int) (%s))" % (ArgText[1], ArgText[0])
         elif pInstruct.pProc.FullName == "label":                           # LABEL
             CppText += IndentText + "glEnd();\n"
             CppText += IndentText + "sprintf(tt_LabelText, \""
@@ -589,6 +638,41 @@ class CppWriter():
             CppText += "log10%s(%s)" % (NumTypeMath, ArgText[0])
         elif pInstruct.pProc.FullName == "lput":                            # FPUT
             CppText += "CList<%s>(%s, %s)" % (self.LogoState.NumType, ArgText[1], ArgText[0])
+        elif pInstruct.pProc.FullName == "mdarray":                         # MDARRAY
+            if pInstruct.ReturnArrayDim is None:
+                print "Internal error: unknown array dimensions for 'MDARRAY %s'" % ArgText[0]
+                return None
+            if pInstruct.ReturnArrayDim < 2 or pInstruct.ReturnArrayDim > 3:
+                print "Logical error: MDARRAY cannot create an array with %i dimensions" % pInstruct.ReturnArrayDim
+                return None
+            listargtext = self.GetCppListnumExpansion(pInstruct.Arguments[0], pInstruct.ReturnArrayDim, "MDARRAY")
+            if listargtext == None:
+                return None
+            CppText += "CArray<%s,%i>(%s)" % (self.LogoState.NumType, pInstruct.ReturnArrayDim, listargtext)
+        elif pInstruct.pProc.FullName == "mditem":                          # MDITEM
+            if pInstruct.Arguments[1].Elements[0].Type != ElemType.VAR_VALUE:
+                print "Syntax error: MDITEM requires a variable for the array input, but '%s' was given" % pInstruct.Arguments[1].Elements[0].Text
+                return None
+            ArrayDim = pInstruct.Arguments[1].Elements[0].pVariable.ArrayDim
+            if ArrayDim < 2:
+                print "Logical error: Array '%s' in MDITEM instruction has fewer than 2 dimensions" % pInstruct.Arguments[1].Elements[0].Text
+                return None
+            listargtext = self.GetCppListnumExpansion(pInstruct.Arguments[0], ArrayDim, "MDITEM")
+            if listargtext == None:
+                return None
+            CppText += "%s.Get(%s)" % (ArgText[1], listargtext)
+        elif pInstruct.pProc.FullName == "mdsetitem":                       # MDSETITEM
+            if pInstruct.Arguments[1].Elements[0].Type != ElemType.VAR_VALUE:
+                print "Syntax error: MDSETITEM requires a variable for the array input, but '%s' was given" % pInstruct.Arguments[1].Elements[0].Text
+                return None
+            ArrayDim = pInstruct.Arguments[1].Elements[0].pVariable.ArrayDim
+            if ArrayDim < 2:
+                print "Logical error: Array '%s' in MDSETITEM instruction has fewer than 2 dimensions" % pInstruct.Arguments[1].Elements[0].Text
+                return None
+            listargtext = self.GetCppListnumExpansion(pInstruct.Arguments[0], ArrayDim, "MDSETITEM")
+            if listargtext == None:
+                return None
+            CppText += IndentText + "%s.Set(%s, %s);\n" % (ArgText[1], ArgText[2], listargtext)
         elif pInstruct.pProc.FullName == "minus":                           # MINUS
             CppText += "-(%s)" % ArgText[0]
         elif pInstruct.pProc.FullName == "not":                             # NOT
@@ -686,6 +770,14 @@ class CppWriter():
             CppText += IndentText + "tt_FontHeight = %s;\n" % ArgText[0]
         elif pInstruct.pProc.FullName == "setheading":                      # SETHEADING
             CppText += IndentText + "tt_TurtleDir = %s;\n" % ArgText[0]
+        elif pInstruct.pProc.FullName == "setitem":                         # SETITEM
+            if pInstruct.Arguments[1].Elements[0].Type != ElemType.VAR_VALUE:
+                print "Syntax error: destination array for SETITEM instruction can only be a variable"
+                return None
+            if pInstruct.Arguments[1].Elements[0].pVariable.ArrayDim != 1:
+                print "Logical error: Array '%s' in SETITEM instruction is not 1-dimensional" % pInstruct.Arguments[1].Elements[0].Text
+                return None
+            CppText += IndentText + "%s.Set(%s, (int) (%s));\n" % (ArgText[1], ArgText[2], ArgText[0])
         elif pInstruct.pProc.FullName == "setjustifyvert":                  # SETJUSTIFYVERT
             CppText += IndentText + "tt_JustifyVert = %s;\n" % ArgText[0]
         elif pInstruct.pProc.FullName == "setjustifyhorz":                  # SETJUSTIFYHORZ

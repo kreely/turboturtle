@@ -264,7 +264,8 @@ class Instruction:
         self.Name = Name
         self.bBuiltIn = bBuiltIn
         self.pProc = None
-        self.pMakeVar = None
+        self.pMakeVar = None         # only used in MAKE, LOCALMAKE, and FOR instructions
+        self.ReturnArrayDim = None   # used for ARRAY and MDARRAY to store dimensions during fixup
         self.nParams = nParams
         self.bParenthesized = bParenthesized
         self.bExtraArgs = bExtraArgs

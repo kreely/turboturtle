@@ -143,6 +143,8 @@ class TT_App:
         if GlobalInitCode is None:
             return False
         # Next, write the function definitions for the user-defined Logo procedures
+        if len(self.Procedures) > 0:
+            writer.OutputText += "// Function definitions for Logo procedures\n"
         for proc in self.Procedures:
             writer.OutputText += "static "
             if not writer.WriteFunctionPrototype(proc):
@@ -469,7 +471,12 @@ class TT_App:
                     arg.ArgType = argtype
                     nFixups += 1
         # next, try to discover exactly which procedure is being called by this instruction
-        if pInstruct.pProc is None and len([arg for arg in pInstruct.Arguments if arg.ArgType == ParamType.UNKNOWN]) == 0:
+        unknownargs = len([arg for arg in pInstruct.Arguments if arg.ArgType == ParamType.UNKNOWN])
+        for arg in pInstruct.Arguments:
+            if arg.ArgType == ParamType.ARRAY and arg.Elements[0].Type == ElemType.VAR_VALUE:
+                if arg.Elements[0].pVariable.ArrayDim is None:
+                    unknownargs += 1
+        if pInstruct.pProc is None and unknownargs == 0:
             # look for built-in procedures
             if pInstruct.bBuiltIn == True:
                 for proc in Builtin._procs:
@@ -506,15 +513,39 @@ class TT_App:
                         if proc.InputVariables[i].Type == ParamType.UNKNOWN:
                             proc.InputVariables[i].Type = pInstruct.Arguments[i].ArgType
                             nFixups += 1
-                            continue
-                        if proc.InputVariables[i].Type != pInstruct.Arguments[i].ArgType:
+                        elif proc.InputVariables[i].Type != pInstruct.Arguments[i].ArgType:
                             print "Logical error: procedure '%s' expects input #%i to be type '%s', but is called with '%s'" % (proc.Name, i+1, ParamType.Names[proc.InputVariables[i].Type], ParamType.Names[pInstruct.Arguments[i].ArgType])
                             return None
+                        if proc.InputVariables[i].Type == ParamType.ARRAY:
+                            if proc.InputVariables[i].ArrayDim is None:
+                                proc.InputVariables[i].ArrayDim = pInstruct.Arguments[i].Elements[0].pVariable.ArrayDim
+                                nFixups += 1
+                            elif proc.InputVariables[i].ArrayDim != pInstruct.Arguments[i].Elements[0].pVariable.ArrayDim:
+                                print "Logical error: procedure '%s' expects input #%i to be an array with dimension %i, but is called with an array dimension %i" % (proc.Name, i+1, proc.InputVariables[i].ArrayDim, pInstruct.Arguments[i].Elements[0].pVariable.ArrayDim)
+                                return None
                     pInstruct.pProc = proc
                     nFixups += 1
                     break
+        # Set dimensions of array returned from ARRAY, MDARRAY instructions
+        if pInstruct.bBuiltIn is True and pInstruct.pProc is not None and pInstruct.pProc.FullName in ('array', 'mdarray'):
+            if pInstruct.pProc.FullName == 'array' and pInstruct.ReturnArrayDim == None:
+                pInstruct.ReturnArrayDim = 1
+                nFixups += 1
+            elif pInstruct.pProc.FullName == 'mdarray' and pInstruct.ReturnArrayDim == None:
+                if pInstruct.Arguments[0].Elements[0].Type == ElemType.NUMBER:
+                    pInstruct.ReturnArrayDim = len(pInstruct.Arguments[0].Elements)
+                    nFixups += 1
+                elif pInstruct.Arguments[0].Elements[0].Type == ElemType.FUNC_CALL:
+                    if pInstruct.Arguments[0].Elements[0].Text.lower() != "list":
+                        print "Syntax error: invalid function call '%s' in first parameter to MDARRAY instruction. Only LIST is allowed." % pInstruct.Arguments[0].Elements[0].Text
+                        return None
+                    pInstruct.ReturnArrayDim = len(pInstruct.Arguments[0].Elements[0].pInstruct.Arguments)
+                    nFixups += 1
+                else:
+                    print "Syntax error: Invalid parameter '%s' to MDARRAY instruction. Only a list of numbers or a LIST instruction is allowed." % pInstruct.Arguments[0].Elements[0].Text
+                    return None
         # forward ParamTypes through MAKE/LOCALMAKE instructions
-        if pInstruct.bBuiltIn is True and pInstruct.pProc is not None and (pInstruct.pProc.FullName == 'make' or pInstruct.pProc.FullName == 'localmake'):
+        if pInstruct.bBuiltIn is True and pInstruct.pProc is not None and pInstruct.pProc.FullName in ('make', 'localmake'):
             argtype = pInstruct.Arguments[1].ArgType
             if argtype != ParamType.UNKNOWN:
                 if pInstruct.pMakeVar.Type == ParamType.UNKNOWN:
@@ -523,10 +554,22 @@ class TT_App:
                 elif pInstruct.pMakeVar.Type != argtype:
                     print "Logical error: %s instruction setting variable already type '%s' with argument of type '%s'" % (pInstruct.Name, ParamType.Names[pInstruct.pMakeVar.Type], ParamType.Names[argtype])
                     return None
+            # set array dimensions for destination variable of MAKE/LOCALMAKE
+            if argtype == ParamType.ARRAY and pInstruct.pMakeVar.ArrayDim is None:
+                elem0 = pInstruct.Arguments[1].Elements[0]
+                if elem0.Type == ElemType.VAR_VALUE and elem0.pVariable.ArrayDim is not None:
+                    pInstruct.pMakeVar.ArrayDim = elem0.pVariable.ArrayDim
+                    nFixups += 1
+                elif elem0.Type == ElemType.FUNC_CALL and elem0.pInstruct.ReturnArrayDim is not None:
+                    pInstruct.pMakeVar.ArrayDim = elem0.pInstruct.ReturnArrayDim
+                    nFixups += 1
         # forward ParamType from OUTPUT argument to procedure return type
         if pInstruct.bBuiltIn is True and pInstruct.pProc is not None and pInstruct.pProc.FullName == 'output':
             argtype = pInstruct.Arguments[0].ArgType
-            if argtype != ParamType.UNKNOWN:
+            if argtype == ParamType.ARRAY:
+                print "Logical error: OUTPUT instruction cannot return an ARRAY in procedure '%s'" % pCodeProc.Name
+                return None
+            elif argtype != ParamType.UNKNOWN:
                 if pCodeProc.ReturnType == ParamType.UNKNOWN:
                     pCodeProc.ReturnType = argtype
                     nFixups += 1
