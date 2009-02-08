@@ -934,11 +934,16 @@ class CppWriter():
         NextIndent = IndentText + " " * self.IndentSize
         NumTypeGL = self.LogoState.NumType[0]
         CppText = ""
+        # fill in missing 
         # write code to draw the line
         if self.LogoState.bUseWrap:
             CppText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
             CppText += NextIndent + "%s NewPos[2];\n" % self.LogoState.NumType
             CppText += UpdateTurtleText.replace('tt_TurtlePos', 'NewPos')
+            if UpdateTurtleText.find('tt_TurtlePos[0]') < 0:
+                CppText += NextIndent + "NewPos[0] = tt_TurtlePos[0];\n"
+            if UpdateTurtleText.find('tt_TurtlePos[1]') < 0:
+                CppText += NextIndent + "NewPos[1] = tt_TurtlePos[1];\n"
             CppText += NextIndent + "wrapper_DrawLineSegment(tt_TurtlePos, NewPos, tt_UseWrap);\n"
             CppText += NextIndent + "tt_TurtlePos[0] = NewPos[0];\n" + NextIndent + "tt_TurtlePos[1] = NewPos[1];\n"
             CppText += IndentText + "} else {\n"
