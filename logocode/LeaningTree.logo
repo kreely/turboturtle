@@ -21,6 +21,6 @@ To TreeCol :Length
 End
 
 To Go
-  SetPos [-94 -160] Right 5
+  PenUp SetPos [-94 -160] Right 5
   Make "Angle 50 Tree 85                 ; initial angle of 50 shown in red
 End

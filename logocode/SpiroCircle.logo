@@ -19,8 +19,8 @@ End
 
 To Spir
   For [R 0 180 1] [
-  Make "S (180-:R) Make "Theta 0
-  PenUp SetPos XYCurve :R :Theta PenDown
+  Make "S (180-:R)
+  PenUp SetPos XYCurve :R 0 PenDown
   For [Theta 0 360 1] [SetPos XYCurve :R :Theta]
   ClearScreen]
 End
