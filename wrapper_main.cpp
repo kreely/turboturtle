@@ -14,11 +14,13 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include "wrapper_api.h"
+#include "wrapper_pointtext.h"
 
 // static global variables
 static bool bRunning = true;
 static bool bFullscreen = false;
 static bool bReturnWhenDone = false;
+static bool bPrintFPS = false;
 static int iScreenWidth = 512;
 static int iScreenHeight = 512;
 static int iViewWidth = 0;
@@ -97,6 +99,8 @@ bool ParseArgs(int argc, void *argv[])
         }
         else if (strcmp((char *) argv[i], "--exitwhendone") == 0)
             bReturnWhenDone = true;
+        else if (strcmp((char *) argv[i], "--printfps") == 0)
+            bPrintFPS = true;
         else if (strcmp((char *) argv[i], "--help") == 0)
         {
             PrintHelp((char *) argv[0]);
@@ -257,6 +261,9 @@ bool InitGL(void)
 
 void wrapper_Clean(void)
 {
+    static float fFrameTimes[64], fTotalTime = 0.0;
+    static int nFrames = 0, nFrameIdx = 0;
+
     // display the image being drawn
     glEnd();
     SDL_GL_SwapBuffers();
@@ -270,26 +277,67 @@ void wrapper_Clean(void)
     glClear(GL_COLOR_BUFFER_BIT);
     glBegin(GL_LINES);
 
-    // if framespersec == 0, return right away
+    // delay until it's time to start the next frame
+    unsigned int uiFrameDuration;
     if (tt_FramesPerSec == 0.0)
-        return;
-
-    // otherwise, delay until it's time to start the next frame
-    unsigned int uiFrameDuration = (unsigned int) (1000.0 / tt_FramesPerSec);
+        uiFrameDuration = 0;
+    else
+        uiFrameDuration = (unsigned int) (1000.0 / tt_FramesPerSec);
+    unsigned int uiThisFrameStart = uiClockFrameStart;
     unsigned int uiNextFrameStart = uiClockFrameStart + uiFrameDuration;
     unsigned int uiCurTime = SDL_GetTicks();
     if (uiCurTime >= (uiNextFrameStart - 2))
     {
         uiClockFrameStart = uiCurTime;
-        return;
     }
-    while (SDL_GetTicks() < (uiNextFrameStart - 2))
+    else
     {
-        if (CheckExitKey())
-            exit(0);
-        SDL_Delay(4);
+        while ((uiCurTime = SDL_GetTicks()) < (uiNextFrameStart - 2))
+        {
+            if (CheckExitKey())
+                exit(0);
+            SDL_Delay(4);
+        }
+        uiClockFrameStart = uiNextFrameStart;
     }
-    uiClockFrameStart = uiNextFrameStart;
+
+    // print the frame rate if necessary
+    if (bPrintFPS)
+    {
+        // calculate the average frame rate over last 64 frames
+        if (nFrames == 64) fTotalTime -= fFrameTimes[nFrameIdx];
+        fFrameTimes[nFrameIdx] = uiCurTime - uiThisFrameStart;
+        fTotalTime += fFrameTimes[nFrameIdx];
+        nFrameIdx = (nFrameIdx + 1) & 63;
+        if (nFrames < 64) nFrames++;
+        float fAverageTime = fTotalTime / (float) nFrames;
+        // if there was more than 1 second in the last 64 frames, shrink the averaging window down to <= 1 sec
+        if (fTotalTime > 1000.0)
+        {
+            float fSubSecTime = fTotalTime;
+            int iOldIdx = (nFrameIdx - nFrames) & 63;
+            int i1SecFrames = nFrames;
+            while (fSubSecTime > 1000 && i1SecFrames > 1)
+            {
+                fSubSecTime -= fFrameTimes[iOldIdx];
+                iOldIdx = (iOldIdx + 1) & 63;
+                i1SecFrames--;
+            }
+            fAverageTime = fSubSecTime / (float) i1SecFrames;
+        }
+        float fFPS = 1000.0 / fAverageTime;
+        // print it in a string
+        char chMsg[16];
+        sprintf(chMsg, "%.0f FPS", fFPS);
+        // draw the string to the screen
+        unsigned char textcolor[4] = {255, 255, 255, 0};
+        glEnd();
+        glColor3ubv(textcolor);
+        DrawPointText(0, 2, 2, tt_WindowSize/25, iViewWidth/2, -iViewHeight/2, chMsg);
+        glColor3ubv(tt_ColorPen);
+        glBegin(GL_LINES);
+    }
+
     return;
 }
 
