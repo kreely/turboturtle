@@ -1,0 +1,58 @@
+; Ferris Wheels, from: http://www.s193653721.websitehome.co.uk/logoarts/progs/spirograph/ferris.html
+
+.setspecial "WindowSize 400
+.setspecial "FramesPerSec 0.3
+
+Go
+
+To Init
+  Make "R Pick [1 2]
+  Make "S (Pick [-1 1]) * Pick [3 5 7]
+  Make "T (Pick [-1 1]) * Pick [11 13 17 19 23]
+  Make "V Pick [0 180]
+  Make "W Pick [0 180]
+End
+
+To Display
+  ; write header title and footer values
+  SetPC 7 SetJustifyVert 1 SetJustifyHorz 0
+  SetPos [-190 184] (Label "Ferris "Wheel)
+  SetPos [-190 -190] (Label "RST "= :R :S :T)
+  SetJustifyHorz 2
+  SetPos [190 -190] (Label "STp "= :V :W)
+End
+
+To AngCol :Theta
+  Make "Red Abs 255 *Cos (:Theta)
+  Make "Gre Abs 255 *Cos (:Theta + 120)
+  Make "Blu Abs 255 *Cos (:Theta + 240)
+  Output (List :Red :Gre :Blu)
+End
+
+To DrawArms :Angle
+  SetPos [0 0] 
+  SetHeading -(:R*:Angle) Forward 102
+  SetHeading -(:S*:Angle)+:V Forward 51
+  SetHeading -(:T*:Angle)+:W Forward 34
+End
+
+To Ferris
+  SetPenSize 2.0
+  For [Angle 0 360 0.2] [
+    PenUp
+    DrawArms :Angle-0.2
+    Make "StartPos Pos
+    SetPC AngCol :Angle
+    DrawArms :Angle
+    PenDown SetPos :StartPos
+    ]
+End
+
+To Go
+  Forever [
+    PenUp Init Display
+    Ferris
+    ClearScreen
+    ]
+End
+
