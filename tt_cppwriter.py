@@ -119,8 +119,8 @@ class CppWriter():
         # if we use 0,0 here the round-off errors of 'float's will cause artifacts
         self.OutputText += "static %s tt_TurtlePos[2] = {0.5, 0.5};\n" % self.LogoState.NumType
         self.OutputText += "static %s tt_TurtleDir = 0.0;\n" % self.LogoState.NumType
+        self.OutputText += "static float tt_PenSize = 1.0;\n"
         self.OutputText += "static bool tt_PenDown = true;\n"
-        self.OutputText += "static bool tt_PenPaint = true;\n"
         self.OutputText += "static bool tt_TestValue = false;\n"
         self.OutputText += "\n// Global TurboTurtle data, also readable and writable by the wrapper\n"
         self.OutputText += "float tt_FramesPerSec = %f;\n" % self.LogoState.fFramesPerSec
@@ -128,6 +128,7 @@ class CppWriter():
         self.OutputText += "int tt_WindowSize = %i;\n" % self.LogoState.iWindowSize
         self.OutputText += "unsigned char tt_ColorPen[4] = {255,255,255,0};\n"
         self.OutputText += "unsigned char tt_ColorBackground[4] = {0,0,0,0};\n"
+        self.OutputText += "unsigned char *tt_ActiveColor = tt_ColorPen;\n"
         if self.LogoState.bNeedColors:
             self.OutputText += "unsigned char tt_Colors[16][4] = {{0,0,0,0}, {0,0,255,0}, {0,255,0,0}, {0,255,255,0}, {255,0,0,0}, {255,0,255,0}, {255,255,0,0}, {255,255,255,0}, {160,82,45,0}, {210,180,140,0}, {34,139,34,0}, {127,255,212,0}, {250,128,114,0}, {128,0,128,0}, {255,165,0,0}, {128,128,128,0}};\n"
         if self.LogoState.bUseScrunch:
@@ -586,7 +587,6 @@ class CppWriter():
             elif pInstruct.Arguments[1].ArgType == ParamType.ARRAY:
                 CppText += "%s.Get((int) (%s))" % (ArgText[1], ArgText[0])
         elif pInstruct.pProc.FullName == "label":                           # LABEL
-            CppText += IndentText + "glEnd();\n"
             CppText += IndentText + "sprintf(tt_LabelText, \""
             bFirst = True
             for arg in pInstruct.Arguments:
@@ -612,8 +612,8 @@ class CppWriter():
                 elif arg.ArgType == ParamType.BOOLEAN:
                     CppText += '(%s) ? "True" : "False"' % ArgText[i]
             CppText += ");\n"
+            CppText += IndentText + "glColor3ubv(tt_ColorPen);\n"
             CppText += IndentText + "DrawPointText(tt_Font, tt_JustifyVert, tt_JustifyHorz, tt_FontHeight, tt_TurtlePos[0], tt_TurtlePos[1], tt_LabelText);\n"
-            CppText += IndentText + "glBegin(GL_LINES);\n"
         elif pInstruct.pProc.FullName == "last":                            # LAST
             CppText += "%s.Last()" % ArgText[0]
         elif pInstruct.pProc.FullName == "left":                            # LEFT
@@ -692,11 +692,9 @@ class CppWriter():
         elif pInstruct.pProc.FullName == "pendown":                         # PENDOWN
             CppText += IndentText + "tt_PenDown = true;\n"
         elif pInstruct.pProc.FullName == "penerase":                        # PENERASE
-            CppText += IndentText + "tt_PenPaint = false;\n"
-            CppText += IndentText + "glColor3ubv(tt_ColorBackground);\n"
+            CppText += IndentText + "tt_ActiveColor = tt_ColorBackground;\n"
         elif pInstruct.pProc.FullName == "penpaint":                        # PENPAINT
-            CppText += IndentText + "tt_PenPaint = true;\n"
-            CppText += IndentText + "glColor3ubv(tt_ColorPen);\n"
+            CppText += IndentText + "tt_ActiveColor = tt_ColorPen;\n"
         elif pInstruct.pProc.FullName == "pick":                            # PICK
             CppText += "%s.Pick()" % ArgText[0]
         elif pInstruct.pProc.FullName == "pos":                             # POS
@@ -762,8 +760,6 @@ class CppWriter():
             if codetext is None:
                 return None
             CppText += codetext
-            CppText += IndentText + "if (tt_PenPaint == false)\n"
-            CppText += IndentText + " " * self.IndentSize + "glColor3ubv(tt_ColorBackground);\n"
         elif pInstruct.pProc.FullName == "setfont":                         # SETFONT
             CppText += IndentText + "tt_Font = %s;\n" % ArgText[0]
         elif pInstruct.pProc.FullName == "setfontheight":                   # SETFONTHEIGHT
@@ -787,12 +783,12 @@ class CppWriter():
             if codetext is None:
                 return None
             CppText += codetext
-            CppText += IndentText + "if (tt_PenPaint == true)\n"
-            CppText += NextIndent + "glColor3ubv(tt_ColorPen);\n"
         elif pInstruct.pProc.FullName == "setpensize":                      # SETPENSIZE
-            CppText += IndentText + "glEnd();\n"
-            CppText += IndentText + "glLineWidth(%s);\n" % ArgText[0]
-            CppText += IndentText + "glBegin(GL_LINES);\n"
+            CppText += IndentText + "if (tt_PenSize != (float) (%s))\n%s{\n" % (ArgText[0], IndentText)
+            CppText += NextIndent + "wrapper_glFlushVertices();\n"
+            CppText += NextIndent + "tt_PenSize = (float) (%s);\n" % ArgText[0]
+            CppText += NextIndent + "glLineWidth(tt_PenSize);\n"
+            CppText += IndentText + "}\n"
         elif pInstruct.pProc.FullName == "setpos":                          # SETPOS
             Arg = pInstruct.Arguments[0]
             elem0type = Arg.Elements[0].Type
@@ -932,7 +928,6 @@ class CppWriter():
 
     def GetCppBuiltinJump(self, IndentText, UpdateTurtleText):
         NextIndent = IndentText + " " * self.IndentSize
-        NumTypeGL = self.LogoState.NumType[0]
         CppText = ""
         # fill in missing 
         # write code to draw the line
@@ -944,14 +939,14 @@ class CppWriter():
                 CppText += NextIndent + "NewPos[0] = tt_TurtlePos[0];\n"
             if UpdateTurtleText.find('tt_TurtlePos[1]') < 0:
                 CppText += NextIndent + "NewPos[1] = tt_TurtlePos[1];\n"
-            CppText += NextIndent + "wrapper_DrawLineSegment(tt_TurtlePos, NewPos, tt_UseWrap);\n"
+            CppText += NextIndent + "wrapper_glDrawLineWrap(tt_TurtlePos, NewPos, tt_UseWrap);\n"
             CppText += NextIndent + "tt_TurtlePos[0] = NewPos[0];\n" + NextIndent + "tt_TurtlePos[1] = NewPos[1];\n"
             CppText += IndentText + "} else {\n"
         else:
             CppText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
-            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
+            CppText += NextIndent + "wrapper_glLineVertex((float) tt_TurtlePos[0], (float) tt_TurtlePos[1]);\n"
             CppText += UpdateTurtleText
-            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
+            CppText += NextIndent + "wrapper_glLineVertex((float) tt_TurtlePos[0], (float) tt_TurtlePos[1]);\n"
             CppText += IndentText + "} else {\n"
         # write code for the PenUp case
         CppText += UpdateTurtleText
@@ -959,8 +954,7 @@ class CppWriter():
         return CppText
 
     def GetCppBuiltinMove(self, IndentText, Arg, DirSign):
-        NumTypeGL = self.LogoState.NumType[0]
-        if NumTypeGL == "f":
+        if self.LogoState.NumType == "float":
             NumTypeMath = "f"
         else:
             NumTypeMath = ""
@@ -987,15 +981,15 @@ class CppWriter():
             CppText += NextIndent + "%s NewPos[2];\n" % self.LogoState.NumType
             CppText += NextIndent + "NewPos[0] = " + NewXText
             CppText += NextIndent + "NewPos[1] = " + NewYText
-            CppText += NextIndent + "wrapper_DrawLineSegment(tt_TurtlePos, NewPos, tt_UseWrap);\n"
+            CppText += NextIndent + "wrapper_glDrawLineWrap(tt_TurtlePos, NewPos, tt_UseWrap);\n"
             CppText += NextIndent + "tt_TurtlePos[0] = NewPos[0];\n" + NextIndent + "tt_TurtlePos[1] = NewPos[1];\n"
             CppText += IndentText + "} else {\n"
         else:
             CppText += IndentText + "if (tt_PenDown)\n" + IndentText + "{\n"
-            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
+            CppText += NextIndent + "wrapper_glLineVertex((float) tt_TurtlePos[0], (float) tt_TurtlePos[1]);\n"
             CppText += NextIndent + "tt_TurtlePos[0] = " + NewXText
             CppText += NextIndent + "tt_TurtlePos[1] = " + NewYText
-            CppText += NextIndent + "glVertex2%s(tt_TurtlePos[0], tt_TurtlePos[1]);\n" % NumTypeGL
+            CppText += NextIndent + "wrapper_glLineVertex((float) tt_TurtlePos[0], (float) tt_TurtlePos[1]);\n"
             CppText += IndentText + "} else {\n"
         # write code for the PenUp case
         CppText += NextIndent + "tt_TurtlePos[0] = " + NewXText

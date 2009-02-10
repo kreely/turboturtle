@@ -16,7 +16,7 @@ extern const short bitmap_font10x18[96][18];
 extern const short bitmap_font12x16[96][16];
 extern const short bitmap_font8x12[96][12];
 
-// these data are define in wrapper_main.cpp
+// these data are defined in wrapper_main.cpp
 extern float fPixelsPerTurtleStep;
 
 struct font {
@@ -57,7 +57,8 @@ bool DrawPointText(int iFont, int iJustifyVert, int iJustifyHorz, float fHeight,
     else if (iJustifyHorz >= 2) fLeftX -= iStrLength * iFontCols * fPointSpace;
 
     // set up openGL
-    glEnable(GL_POINT_SMOOTH);
+    float fOldPointSize;
+    glGetFloatv(GL_POINT_SIZE, &fOldPointSize);
     glPointSize(fPointSpace * fPixelsPerTurtleStep * 1.5);
     glBegin(GL_POINTS);
 
@@ -85,6 +86,7 @@ bool DrawPointText(int iFont, int iJustifyVert, int iJustifyHorz, float fHeight,
 
     // OpenGL cleanup
     glEnd();
+    glPointSize(fOldPointSize);
 
     return true;
 }
