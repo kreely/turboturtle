@@ -89,6 +89,8 @@ bool CheckExitKey(void)
     {
         if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
             return true;
+        if (event.type == SDL_QUIT)
+            return true;
     }
 
     return false;
