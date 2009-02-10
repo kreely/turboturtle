@@ -34,7 +34,9 @@ static bool ParseArgs(int argc, void *argv[]);
 static void PrintHelp(const char *pchProgName);
 static bool InitSDL(void);
 static bool InitGL(void);
-static bool CheckExitKey(void);
+
+// global functions used by other parts of the wrapper
+bool CheckExitKey(void);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Main program function
@@ -76,7 +78,25 @@ int main(int argc, void *argv[])
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Helper functions for the wrapper
+// global functions used in other parts of the wrapper
+
+bool CheckExitKey(void)
+{
+    SDL_Event event;
+
+    // Grab all the events off the queue.
+    while (SDL_PollEvent(&event))
+    {
+        if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
+            return true;
+    }
+
+    return false;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Helper functions for the Main wrapper
 
 bool ParseArgs(int argc, void *argv[])
 {
@@ -134,20 +154,6 @@ void PrintHelp(const char *pchProgName)
     printf("  --fullscreen              - Set fullscreen video mode\n");
     printf("  --exitwhendone            - Exit immediately when done instead of waiting for Escape\n");
     printf("\n");
-}
-
-bool CheckExitKey(void)
-{
-    SDL_Event event;
-
-    // Grab all the events off the queue.
-    while (SDL_PollEvent(&event))
-    {
-        if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
-            return true;
-    }
-
-    return false;
 }
 
 bool InitSDL(void)

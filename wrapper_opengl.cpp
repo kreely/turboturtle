@@ -21,6 +21,9 @@
 extern int iViewWidth;
 extern int iViewHeight;
 
+// global functions defined in wrapper_main.cpp
+extern bool CheckExitKey(void);
+
 // static data used only by the opengl wrapper functions
 static float fLineVertex[MAX_VERTEX][2];
 static unsigned char ucLineColors[MAX_VERTEX][4];
@@ -31,32 +34,42 @@ static int   iPointVertices;
 
 static void FlushLineVertices(void)
 {
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-	
-	glVertexPointer(2, GL_FLOAT, 0, fLineVertex);
-	glColorPointer(3, GL_UNSIGNED_BYTE, 4, ucLineColors);
-	glDrawArrays(GL_LINES, 0, iLineVertices);
-	
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
+    if (CheckExitKey()) exit(0);
 
-    iLineVertices = 0;
+    if (iLineVertices > 0)
+    {
+	    glEnableClientState(GL_VERTEX_ARRAY);
+	    glEnableClientState(GL_COLOR_ARRAY);
+	
+	    glVertexPointer(2, GL_FLOAT, 0, fLineVertex);
+	    glColorPointer(3, GL_UNSIGNED_BYTE, 4, ucLineColors);
+	    glDrawArrays(GL_LINES, 0, iLineVertices);
+	
+	    glDisableClientState(GL_VERTEX_ARRAY);
+	    glDisableClientState(GL_COLOR_ARRAY);
+
+        iLineVertices = 0;
+    }
 }
 
 static void FlushPointVertices(void)
 {
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-	
-	glVertexPointer(2, GL_FLOAT, 0, fPointVertex);
-	glColorPointer(3, GL_UNSIGNED_BYTE, 4, ucPointColors);
-	glDrawArrays(GL_POINTS, 0, iPointVertices);
-	
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
+    if (CheckExitKey()) exit(0);
 
-    iPointVertices = 0;
+    if (iPointVertices > 0)
+    {
+	    glEnableClientState(GL_VERTEX_ARRAY);
+	    glEnableClientState(GL_COLOR_ARRAY);
+	
+	    glVertexPointer(2, GL_FLOAT, 0, fPointVertex);
+	    glColorPointer(3, GL_UNSIGNED_BYTE, 4, ucPointColors);
+	    glDrawArrays(GL_POINTS, 0, iPointVertices);
+	
+	    glDisableClientState(GL_VERTEX_ARRAY);
+	    glDisableClientState(GL_COLOR_ARRAY);
+
+        iPointVertices = 0;
+    }
 }
 
 void wrapper_glFlushVertices(void)
