@@ -14,23 +14,32 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include "wrapper_api.h"
+#include "wrapper_pointtext.h"
 
 #define MAX_VERTEX 1024
 
-// these data are defined in wrapper_main.cpp
-extern int iViewWidth;
-extern int iViewHeight;
+// globals used by other parts of the wrapper and/or the logo code
+float fPixelsPerTurtleStep = 0.0;
+int   iScreenWidth = 512;
+int   iScreenHeight = 512;
+int   iViewWidth = 0;
+int   iViewHeight = 0;
 
 // global functions defined in wrapper_main.cpp
 extern bool CheckExitKey(void);
 
 // static data used only by the opengl wrapper functions
+static bool bPrintFPS = false;
+static unsigned int uiClockFrameStart;
 static float fLineVertex[MAX_VERTEX][2];
 static unsigned char ucLineColors[MAX_VERTEX][4];
 static float fPointVertex[MAX_VERTEX][2];
 static unsigned char ucPointColors[MAX_VERTEX][4];
 static int   iLineVertices;
 static int   iPointVertices;
+
+///////////////////////////////////////////////////////////////
+// local (static) functions
 
 static void FlushLineVertices(void)
 {
@@ -70,6 +79,159 @@ static void FlushPointVertices(void)
 
         iPointVertices = 0;
     }
+}
+
+///////////////////////////////////////////////////////////////
+// wrapper functions called from other parts of the wrapper
+
+bool InitGL(bool print_fps)
+{
+    bPrintFPS = print_fps;
+
+    // Flat shading model
+    glShadeModel(GL_FLAT);
+
+    // Culling
+    glDisable(GL_CULL_FACE);
+
+    // Set the clear color
+    glClearColor(0, 0, 0, 0);
+
+    // Setup viewport
+    glViewport(0, 0, iScreenWidth, iScreenHeight);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+
+    // don't use perspective
+    if (iScreenWidth <= iScreenHeight)
+    {
+        fPixelsPerTurtleStep = (float) iScreenWidth / (float) tt_WindowSize;
+        iViewWidth = tt_WindowSize;
+        iViewHeight = iScreenHeight * tt_WindowSize / iScreenWidth;
+    }
+    else
+    {
+        fPixelsPerTurtleStep = (float) iScreenHeight / (float) tt_WindowSize;
+        iViewHeight = tt_WindowSize;
+        iViewWidth = iScreenWidth * tt_WindowSize / iScreenHeight;
+    }
+    glOrtho(-iViewWidth/2, iViewWidth/2, -iViewHeight/2, iViewHeight/2, -1, 1);
+
+    // set up z-buffer and alpha blending parameters
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // set up lighting
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glDisable(GL_LIGHTING);
+
+    // clear the screen
+    glClear(GL_COLOR_BUFFER_BIT);
+    SDL_GL_SwapBuffers();
+    glColor3ub(255, 255, 255);
+
+    // mark the start time
+    uiClockFrameStart = SDL_GetTicks();
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Wrapper functions called from the compiled Logo code
+
+void wrapper_Clean(void)
+{
+    static float fFrameTimes[64], fTotalTime = 0.0;
+    static int nFrames = 0, nFrameIdx = 0;
+
+    // display the image being drawn
+    wrapper_glFlushVertices();
+    SDL_GL_SwapBuffers();
+
+    // exit program if exit key was pressed
+    if (CheckExitKey())
+        exit(0);
+
+    // paint the background and set up for drawing lines
+    glClearColor(tt_ColorBackground[0]/255.0, tt_ColorBackground[1]/255.0, tt_ColorBackground[2]/255.0, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // delay until it's time to start the next frame
+    unsigned int uiFrameDuration;
+    if (tt_FramesPerSec == 0.0)
+        uiFrameDuration = 0;
+    else
+        uiFrameDuration = (unsigned int) (1000.0 / tt_FramesPerSec);
+    unsigned int uiThisFrameStart = uiClockFrameStart;
+    unsigned int uiNextFrameStart = uiClockFrameStart + uiFrameDuration;
+    unsigned int uiCurTime = SDL_GetTicks();
+    if (uiCurTime >= (uiNextFrameStart - 2))
+    {
+        uiClockFrameStart = uiCurTime;
+    }
+    else
+    {
+        while ((uiCurTime = SDL_GetTicks()) < (uiNextFrameStart - 2))
+        {
+            if (CheckExitKey())
+                exit(0);
+            SDL_Delay(4);
+        }
+        uiClockFrameStart = uiNextFrameStart;
+    }
+
+    // print the frame rate if necessary
+    if (bPrintFPS)
+    {
+        // calculate the average frame rate over last 64 frames
+        if (nFrames == 64) fTotalTime -= fFrameTimes[nFrameIdx];
+        fFrameTimes[nFrameIdx] = uiCurTime - uiThisFrameStart;
+        fTotalTime += fFrameTimes[nFrameIdx];
+        nFrameIdx = (nFrameIdx + 1) & 63;
+        if (nFrames < 64) nFrames++;
+        float fAverageTime = fTotalTime / (float) nFrames;
+        // if there was more than 1 second in the last 64 frames, shrink the averaging window down to <= 1 sec
+        if (fTotalTime > 1000.0)
+        {
+            float fSubSecTime = fTotalTime;
+            int iOldIdx = (nFrameIdx - nFrames) & 63;
+            int i1SecFrames = nFrames;
+            while (fSubSecTime > 1000 && i1SecFrames > 1)
+            {
+                fSubSecTime -= fFrameTimes[iOldIdx];
+                iOldIdx = (iOldIdx + 1) & 63;
+                i1SecFrames--;
+            }
+            fAverageTime = fSubSecTime / (float) i1SecFrames;
+        }
+        float fFPS = 1000.0 / fAverageTime;
+        // print it in a string
+        char chMsg[16];
+        sprintf(chMsg, "%.0f FPS", fFPS);
+        // draw the string to the screen
+        unsigned char textcolor[4] = {255, 255, 255, 0};
+        glColor3ubv(textcolor);
+        DrawPointText(0, 2, 2, tt_WindowSize/25, iViewWidth/2, -iViewHeight/2, chMsg);
+    }
+
+    return;
+}
+
+void wrapper_Erase(void)
+{
+    // flush any pending drawing operations
+    wrapper_glFlushVertices();
+
+    // paint the background and set up for drawing lines
+    glClearColor(tt_ColorBackground[0]/255.0, tt_ColorBackground[1]/255.0, tt_ColorBackground[2]/255.0, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // exit program if exit key was pressed
+    if (CheckExitKey())
+        exit(0);
 }
 
 void wrapper_glFlushVertices(void)

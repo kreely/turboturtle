@@ -50,6 +50,7 @@ Builtin.AddBuiltin("count",        None,    ParamType.NUMBER,  False, False, Par
 Builtin.AddBuiltin("difference",   None,    ParamType.NUMBER,  False, False, ParamType.NUMBER,     ParamType.NUMBER)
 Builtin.AddBuiltin("do.while",     None,    ParamType.NOTHING, False, False, ParamType.LISTCODE,   ParamType.BOOLEAN)
 Builtin.AddBuiltin("do.until",     None,    ParamType.NOTHING, False, False, ParamType.LISTCODE,   ParamType.BOOLEAN)
+Builtin.AddBuiltin("dot",          None,    ParamType.NOTHING, False, False, ParamType.NUMBER,     ParamType.NUMBER)
 Builtin.AddBuiltin("emptyp",       None,    ParamType.BOOLEAN, False, False, ParamType.LISTNUM)
 Builtin.AddBuiltin("erasescreen",  None,    ParamType.NOTHING, False, False)
 Builtin.AddBuiltin("exp",          None,    ParamType.NUMBER,  False, False, ParamType.NUMBER)

@@ -495,6 +495,9 @@ class CppWriter():
                 CppText += IndentText + "} while (%s);\n" % ArgText[1]
             else:
                 CppText += IndentText + "} while (!(%s));\n" % ArgText[1]
+        elif pInstruct.pProc.FullName == "dot":                             # DOT
+            CppText += IndentText + "if (tt_PenDown)\n"
+            CppText += NextIndent + "wrapper_glPointVertex((float) (%s), (float) (%s));\n" % (ArgText[0], ArgText[1])
         elif pInstruct.pProc.FullName == "emptyp":                          # EMPTYP
             CppText += "%s.Length() == 0" % ArgText[0]
         elif pInstruct.pProc.FullName == "erasescreen":                     # ERASESCREEN
@@ -787,6 +790,7 @@ class CppWriter():
             CppText += IndentText + "if (tt_PenSize != (float) (%s))\n%s{\n" % (ArgText[0], IndentText)
             CppText += NextIndent + "wrapper_glFlushVertices();\n"
             CppText += NextIndent + "tt_PenSize = (float) (%s);\n" % ArgText[0]
+            CppText += NextIndent + "glPointSize(tt_PenSize * fPixelsPerTurtleStep);\n"
             CppText += NextIndent + "glLineWidth(tt_PenSize);\n"
             CppText += IndentText + "}\n"
         elif pInstruct.pProc.FullName == "setpos":                          # SETPOS

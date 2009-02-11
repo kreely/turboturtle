@@ -14,11 +14,16 @@ extern unsigned char *tt_ActiveColor;
 extern unsigned char  tt_ColorPen[];
 extern unsigned char  tt_ColorBackground[];
 
-// Functions in the Main wrapper
-void wrapper_Clean(void);
-void wrapper_Erase(void);
+// Global data defined in the OpenGL wrapper
+extern float fPixelsPerTurtleStep;
+extern int   iScreenWidth;
+extern int   iScreenHeight;
+extern int   iViewWidth;
+extern int   iViewHeight;
 
 // Functions in the OpenGL wrapper
+void wrapper_Clean(void);
+void wrapper_Erase(void);
 void wrapper_glFlushVertices(void);
 void wrapper_glLineVertex(float fVertexX, float fVertexY);
 void wrapper_glPointVertex(float fVertexX, float fVertexY);
