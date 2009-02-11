@@ -1,0 +1,52 @@
+; Poly Weaver, from: http://www.s193653721.websitehome.co.uk/logoarts/progs/wand/weaver.html
+
+.setspecial "windowsize 400
+.setspecial "framespersec 40
+
+Go
+
+To Go
+  Forever [
+    Init
+      For [OffSet 0 480 2] [
+      PenUp SetXY -:Side/2 -60 PenDown
+      Weave :PolyA :PolyB :OffSet
+      Display :PolyA :PolyB
+      ClearScreen]
+    Wait 120]
+End
+
+To Display :PolyA :PolyB
+  ; write header title and footer values
+  PenUp SetPC 7 SetHeading 0 SetJustifyVert 1
+  SetPos [-190 182] (Label "PolyWeaver)
+  SetPos [-190 -190] (Label "A "B "= :PolyA :PolyB)
+  SetPos [134 -190] (Label "Rep "= :Rep)
+End
+
+To Init
+  Make "Side 52
+  Make "PolyA Pick [3 4 5 6 7 8 9 10 11 12]
+  Make "PolyB Pick [2 3 4 5 6 7 8]
+  Make "Rep HCF :PolyA :PolyB
+  Make "Rep (:PolyA/:Rep) * :PolyB
+End
+
+To HCF :A :B
+  ; Output the highest common factor of two input numbers
+  Make "Rem Remainder :A :B
+  IfElse :Rem = 0 [ Output :B ] [ Output HCF :B :Rem ]
+End
+
+To Weave :PolyA :PolyB :OffSet
+  Make "A 90 Make "B 90
+  Repeat :Rep [
+    SetHeading :A
+    SetPC 2 Forward :Side
+    SetHeading :B + :OffSet + :A
+    SetPC 6 Forward :Side
+    Make "A :A-(360/:PolyA)
+    Make "B :B-(360/:PolyB) ]
+End
+
+

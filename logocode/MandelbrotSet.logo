@@ -1,0 +1,35 @@
+; Mandelbrot Set, from: http://www.s193653721.websitehome.co.uk/logoarts/progs/fractals/mand.html
+
+.setspecial "windowsize 400
+.setspecial "framespersec 3
+
+Forever [ For [i 1 12] [ Go :i ClearScreen ] Wait 120 For [i 12 2] [ Go :i ClearScreen ] ]
+
+To Go :Order
+  Make "Size Item :Order [24 16 12 8 6 4 3 2 1 0.7 0.5 0.3 ]
+  SetPenSize :Size * 1.2
+  Make "Start (Int :Size/2)-192
+  For [Y 0 191 :Size] [
+    For [X :Start 191 :Size] [
+    SetPC 0 Mand (:X/140)-0.7 :Y/140
+    Dot :X :Y
+    Dot :X Minus :Y ] ]
+End
+
+To Mand :Mp :Np
+  Make "M 0 Make "N 0 Make "Count 0
+  Repeat 90 [
+    Make "Mnew (:M * :M) - (:N * :N) + :Mp
+    Make "N (2*:M*:N) + :Np
+    Make "M :Mnew
+    Make "Count :Count + 1
+    If ((:M * :M) + (:N * :N)) > 4 [
+      SetPC PenCol :Count Stop] ]
+End
+
+To PenCol :Theta
+  Make "Inner 255 * (:Theta/90)
+  Make "Blu 255 * Sqrt Sin :Theta
+  Output ( List :Inner :Inner :Blu )
+End
+
