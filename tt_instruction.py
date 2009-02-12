@@ -294,6 +294,24 @@ class Instruction:
                 self.Arguments.append(newarg)
                 self.nParams += 1
             return True
+        # if this is a parenthesized built-in instruction then we need to count args and determine if the
+        # non-parenthesized form of the instruction was really intended
+        if self.bBuiltIn and self.bParenthesized:
+            FoundParams = 0
+            while len(CodeElements) > 0:
+                newarg = Argument()
+                if not newarg.ParseFromCodeElements(self.Name, CodeElements, ProcName, Procedures):
+                    return False
+                self.Arguments.append(newarg)
+                FoundParams += 1
+            if FoundParams == self.nParams:
+                return True
+            procs = [ proc for proc in Builtin._procs if not proc.bParenthesized and proc.nParams == FoundParams and (proc.FullName == self.Name.lower() or proc.AbbrevName == self.Name.lower()) ]
+            if len(procs) > 0:
+                self.pProc = procs[0]
+                self.nParams = FoundParams
+                self.bParenthesized = False
+                return True
         # we do know how many arguments will be given to this instruction, so only take that many
         for i in range(self.nParams):
             newarg = Argument()
