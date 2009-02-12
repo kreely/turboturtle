@@ -1,0 +1,72 @@
+; HopAlong, from: http://www.s193653721.websitehome.co.uk/logoarts/progs/dotplots/hop.html
+
+.setspecial "windowsize 400
+.setspecial "framespersec 0.3
+
+Go
+
+To Go
+  Forever [
+    Init Fit2Screen :A :B :C :Cycle
+    Hop :A :B :C :Cycle
+    Display :A :B :C :Cycle
+    ClearScreen
+    ]
+End
+
+To Init
+  Make "A Random 100
+  Make "B Random 100
+  Make "C Random 100
+  Make "Cycle 10000
+End
+
+To Display :A :B :C :Cycle
+  PenUp SetPC 7 SetJustifyHorz 0
+  SetJustifyVert 0 SetXY -195 195 (Label "Hopalong)
+  SetJustifyVert 2 SetJustifyHorz 1 SetXY 0 -195 (Label "A :A "B :B "C :C)
+End
+
+To Fit2Screen :A :B :C :Cycle
+  Make "X 0 Make "Y 0
+  Make "Xmax 0 Make "Xmin 0
+  Make "Ymax 0 Make "Ymin 0
+  PenUp
+  Repeat :Cycle [HopAlong :A :B :C
+    If :X > :Xmax [Make "Xmax :X]
+    If :X < :Xmin [Make "Xmin :X]
+    If :Y > :Ymax [Make "Ymax :Y]
+    If :Y < :Ymin [Make "Ymin :Y] ]
+  Make "Xsize :Xmax - :Xmin
+  Make "Ysize :Ymax - :Ymin
+  Make "Scale 350/:YSize
+  Make "Xcent Minus (:Xmax + :Xmin) / 2
+  Make "Ycent Minus (:Ymax + :Ymin) / 2
+End
+
+To Hop :A :B :C :Cycle
+  Make "X 0 Make "Y 0
+  PenDown SetPenSize 1.2
+  Repeat 180 [
+    SetPC AngCol RepCount
+    Repeat Int :Cycle/180 [HopAlong :A :B :C
+      Dot :Scale*(:X+:XCent) :Scale*(:Y+:YCent) ] ]
+End
+
+To Hopalong :A :B :C
+  Make "Xnew :Y-((Sign :X)*Abs((Sin :X)*(Cos :B)+:C-:X*Sin (:A+:B+:C)))
+  Make "Y :A-:X
+  Make "X :Xnew
+End
+
+To Sign :Num
+  IfElse :Num < 0 [Output Minus 1] [Output 1]
+End
+
+To AngCol :Theta
+  Make "Red Abs 255 *Sin (:Theta)
+  Make "Gre Abs 255 *Sin (:Theta + 120)
+  Make "Blu Abs 255 *Sin (:Theta + 240)
+  Output (List :Red :Gre :Blu)
+End
+

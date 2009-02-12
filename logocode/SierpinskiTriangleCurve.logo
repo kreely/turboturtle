@@ -1,0 +1,37 @@
+; Sierpinsky Triangle, from: 
+
+.setspecial "windowsize 400
+.setspecial "framespersec 0.7
+
+Forever [ Repeat 12 [ Go RepCount ClearScreen ] Wait 60 ]
+
+To Init
+  ; make Size global value
+  Make "Size 384
+  PenUp SetPos [-192 -168] SetH 90
+End
+
+To Display :Order
+  ; write header title, curve depth and info
+  SetPC 7 SetJustifyHorz 0 SetJustifyVert 1 PenUp
+  SetPos [-190 180] (Label "Sierpinski "Triangle "Curve)
+  SetJustifyHorz 2
+  SetPos [190 180] (Label "Order: :Order)
+End
+
+To Sierpinski :Order :Size :Parity
+  If :Order < 1 [Forward :Size Stop]       ; ie if = 0
+  Left :Parity*60
+  Sierpinski :Order-1 :Size/2 Minus :Parity
+  Right :Parity*60
+  Sierpinski :Order-1 :Size/2 :Parity
+  Right :Parity*60
+  Sierpinski :Order-1 :Size/2 Minus :Parity
+  Left :Parity*60
+End
+
+To Go :Order
+  Display :Order Init
+  PenDown Sierpinski :Order :Size 1
+End
+
