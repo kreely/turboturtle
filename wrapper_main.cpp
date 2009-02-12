@@ -57,6 +57,7 @@ int main(int argc, void *argv[])
 
     // call the LOGO code
     tt_LogoMain();
+    wrapper_glFlushVertices();
     SDL_GL_SwapBuffers();
 
     // wait until exit key pressed
