@@ -3,10 +3,10 @@
 .setspecial "windowsize 400
 .setspecial "framespersec 3
 
-Forever [ For [i 1 12] [ Go :i ClearScreen ] Wait 120 For [i 12 2] [ Go :i ClearScreen ] ]
+Forever [ For [i 1 10] [ Go :i ClearScreen ] Wait 120 For [i 10 2] [ Go :i ClearScreen ] ]
 
 To Go :Order
-  Make "Size Item :Order [24 16 12 8 6 4 3 2 1 0.7 0.5 0.3 ]
+  Make "Size Item :Order [12 8 6 4 3 2 1 0.7 0.5 0.25 ]
   SetPenSize :Size * 1.2
   Make "Start (Int :Size/2)-192
   For [Y 0 191 :Size] [
