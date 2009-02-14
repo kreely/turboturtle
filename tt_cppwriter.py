@@ -18,6 +18,7 @@ CppHead = """
 /********************************************/
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include <time.h>
@@ -441,11 +442,12 @@ class CppWriter():
                     return None
                 ArgText.append(text)
         # now handle the particular instruction
-        if pInstruct.pProc.FullName == ".setspecial":                       # .SETSPECIAL
+        FullName = pInstruct.pProc.FullName
+        if FullName == ".setspecial":                                       # .SETSPECIAL
             return ""
-        elif pInstruct.pProc.FullName == "abs":                             # ABS
+        elif FullName == "abs":                                             # ABS
             CppText += "fabs%s(%s)" % (NumTypeMath, ArgText[0])
-        elif pInstruct.pProc.FullName == "and":                             # AND
+        elif FullName == "and":                                             # AND
             bFirst = True
             for argtext in ArgText:
                 if bFirst is True:
@@ -453,60 +455,60 @@ class CppWriter():
                 else:
                     CppText += " && "
                 CppText += "(%s)" % argtext
-        elif pInstruct.pProc.FullName == "arctan":                          # ARCTAN
+        elif FullName == "arctan":                                          # ARCTAN
             if len(ArgText) == 1:
                 CppText += "atan%s(%s) * tt_DegreeRad" % (NumTypeMath, ArgText[0])
             else:
                 CppText += "atan2%s(%s, %s) * tt_DegreeRad" % (NumTypeMath, ArgText[1], ArgText[0])
-        elif pInstruct.pProc.FullName == "array":                           # ARRAY
+        elif FullName == "array":                                           # ARRAY
             CppText += "CArray<%s,1>(" % self.LogoState.NumType
             if len(pInstruct.Arguments) == 1:
                 CppText += "(int) (%s), 1" % ArgText[0]
             else:
                 CppText += "(int) (%s), (int) (%s)" % (ArgText[0], ArgText[1])
             CppText += ")"
-        elif pInstruct.pProc.FullName == "back":                            # BACK
+        elif FullName == "back":                                            # BACK
             return self.GetCppBuiltinMove(IndentText, pInstruct.Arguments[0], "-")
-        elif pInstruct.pProc.FullName == "butfirst":                        # BUTFIRST
+        elif FullName == "butfirst":                                        # BUTFIRST
             CppText += "%s.ButFirst()" % ArgText[0]
-        elif pInstruct.pProc.FullName == "butlast":                         # BUTLAST
+        elif FullName == "butlast":                                         # BUTLAST
             CppText += "%s.ButLast()" % ArgText[0]
-        elif pInstruct.pProc.FullName == "clean":                           # CLEAN
+        elif FullName == "clean":                                           # CLEAN
             CppText += IndentText + "wrapper_Clean();\n"
-        elif pInstruct.pProc.FullName == "clearscreen":                     # CLEARSCREEN
+        elif FullName == "clearscreen":                                     # CLEARSCREEN
             # just move to HOME position and call clean
             CppText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = 0.5;\n"
             CppText += IndentText + "tt_TurtleDir = 0.0;\n"
             CppText += IndentText + "wrapper_Clean();\n"
-        elif pInstruct.pProc.FullName == "cos":                             # COS
+        elif FullName == "cos":                                             # COS
             CppText += "cos%s((%s) * tt_RadDegree)" % (NumTypeMath, ArgText[0])
-        elif pInstruct.pProc.FullName == "count":                           # COUNT
+        elif FullName == "count":                                           # COUNT
             CppText += "%s.Length()" % ArgText[0]
-        elif pInstruct.pProc.FullName == "difference":                      # DIFFERENCE
+        elif FullName == "difference":                                      # DIFFERENCE
             CppText += "(%s) - (%s)" % (ArgText[0], ArgText[1])
-        elif pInstruct.pProc.FullName in ("do.while", "do.until"):          # DO.WHILE, DO.UNTIL
+        elif FullName in ("do.while", "do.until"):                          # DO.WHILE, DO.UNTIL
             CppText += IndentText + "do {\n"
             for instruct in pInstruct.Arguments[0].Elements[0].pInstruct:
                 codetext = self.GetCppInstruction(instruct, iIndent + 1, True)
                 if codetext is None:
                     return None
                 CppText += codetext
-            if pInstruct.pProc.FullName == "do.while":
+            if FullName == "do.while":
                 CppText += IndentText + "} while (%s);\n" % ArgText[1]
             else:
                 CppText += IndentText + "} while (!(%s));\n" % ArgText[1]
-        elif pInstruct.pProc.FullName == "dot":                             # DOT
+        elif FullName == "dot":                                             # DOT
             CppText += IndentText + "if (tt_PenDown)\n"
             CppText += NextIndent + "wrapper_glPointVertex((float) (%s), (float) (%s));\n" % (ArgText[0], ArgText[1])
-        elif pInstruct.pProc.FullName == "emptyp":                          # EMPTYP
+        elif FullName == "emptyp":                                          # EMPTYP
             CppText += "%s.Length() == 0" % ArgText[0]
-        elif pInstruct.pProc.FullName == "erasescreen":                     # ERASESCREEN
+        elif FullName == "erasescreen":                                     # ERASESCREEN
             CppText += IndentText + "wrapper_Erase();\n"
-        elif pInstruct.pProc.FullName == "exp":                             # EXP
+        elif FullName == "exp":                                             # EXP
             CppText += "exp%s(%s)" % (NumTypeMath, ArgText[0])
-        elif pInstruct.pProc.FullName == "first":                           # FIRST
+        elif FullName == "first":                                           # FIRST
             CppText += "%s[0]" % ArgText[0]
-        elif pInstruct.pProc.FullName == "for":                             # FOR
+        elif FullName == "for":                                             # FOR
             my_temp = self.LogoState.TempIdx
             self.LogoState.TempIdx += 1
             varname = pInstruct.pMakeVar.CppName
@@ -529,7 +531,7 @@ class CppWriter():
                     return None
                 CppText += codetext
             CppText += IndentText + "}\n"
-        elif pInstruct.pProc.FullName == "forever":                         # FOREVER
+        elif FullName == "forever":                                         # FOREVER
             my_counter = self.LogoState.LoopIdx
             self.LogoState.LoopIdx += 1
             CppText += IndentText + "for (int loop%02i=1; ; loop%02i++)\n%s{\n" % (my_counter, my_counter, IndentText)
@@ -541,27 +543,27 @@ class CppWriter():
                 CppText += codetext
             CppText += IndentText + "}\n"
             self.LogoState.InnerLoopIdx = -1
-        elif pInstruct.pProc.FullName == "forward":                         # FORWARD
+        elif FullName == "forward":                                         # FORWARD
             return self.GetCppBuiltinMove(IndentText, pInstruct.Arguments[0], "+")
-        elif pInstruct.pProc.FullName == "fput":                            # FPUT
+        elif FullName == "fput":                                            # FPUT
             CppText += "CList<%s>(%s, %s)" % (self.LogoState.NumType, ArgText[0], ArgText[1])
-        elif pInstruct.pProc.FullName == "gaussian":                        # GAUSSIAN
+        elif FullName == "gaussian":                                        # GAUSSIAN
             CppText += "tt_Gaussian()"
-        elif pInstruct.pProc.FullName == "goto":                            # GOTO
+        elif FullName == "goto":                                            # GOTO
             CppText += IndentText + "goto tag_%s;\n" % ArgText[0][1:-1]
-        elif pInstruct.pProc.FullName == "heading":                         # HEADING
+        elif FullName == "heading":                                         # HEADING
             CppText += "(tt_TurtleDir < 0.0 ? 360.0+fmod(tt_TurtleDir,360.0) : fmod(tt_TurtleDir,360.0))"
-        elif pInstruct.pProc.FullName == "home":                            # HOME
+        elif FullName == "home":                                            # HOME
             CppText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = 0.5;\n"
             CppText += IndentText + "tt_TurtleDir = 0.0;\n"
-        elif pInstruct.pProc.FullName in ("if", "ifelse"):                  # IF, IFELSE
+        elif FullName in ("if", "ifelse"):                                  # IF, IFELSE
             CppText += IndentText + "if (%s)\n" % ArgText[0] + IndentText + "{\n"
             for instruct in pInstruct.Arguments[1].Elements[0].pInstruct:
                 codetext = self.GetCppInstruction(instruct, iIndent + 1, True)
                 if codetext is None:
                     return None
                 CppText += codetext
-            if pInstruct.pProc.FullName == "if":
+            if FullName == "if":
                 CppText += IndentText + "}\n"
             else:
                 CppText += IndentText + "} else {\n"
@@ -571,8 +573,8 @@ class CppWriter():
                         return None
                     CppText += codetext
                 CppText += IndentText + "}\n"
-        elif pInstruct.pProc.FullName in ("iftrue", "iffalse"):             # IFTRUE, IFFALSE
-            if pInstruct.pProc.FullName == "iftrue":
+        elif FullName in ("iftrue", "iffalse"):                             # IFTRUE, IFFALSE
+            if FullName == "iftrue":
                 CppText += IndentText + "if (tt_TestValue)\n" + IndentText + "{\n"
             else:
                 CppText += IndentText + "if (!tt_TestValue)\n" + IndentText + "{\n"
@@ -582,15 +584,18 @@ class CppWriter():
                     return None
                 CppText += codetext
             CppText += IndentText + "}\n"
-        elif pInstruct.pProc.FullName == "int":                             # INT
+        elif FullName == "int":                                             # INT
             CppText += "(int) (%s)" % ArgText[0]
-        elif pInstruct.pProc.FullName == "item":                            # ITEM
+        elif FullName == "item":                                            # ITEM
             if pInstruct.Arguments[1].ArgType == ParamType.LISTNUM:
                 CppText += "%s[(int) (%s)-1]" % (ArgText[1], ArgText[0])
             elif pInstruct.Arguments[1].ArgType == ParamType.ARRAY:
                 CppText += "%s.Get((int) (%s))" % (ArgText[1], ArgText[0])
-        elif pInstruct.pProc.FullName == "label":                           # LABEL
-            CppText += IndentText + "sprintf(tt_LabelText, \""
+        elif FullName in ("label", "print"):                                # LABEL, PRINT
+            if FullName == "label":
+                CppText += IndentText + "sprintf(tt_LabelText, \""
+            else:
+                CppText += IndentText + "printf(\""
             bFirst = True
             for arg in pInstruct.Arguments:
                 if bFirst is True:
@@ -602,8 +607,10 @@ class CppWriter():
                 elif arg.ArgType == ParamType.NUMBER:
                     CppText += "%g"
                 else:
-                    print "Syntax error: Invalid parameter type %i (%s) in LABEL instruction." % (arg.ArgType, ParamType.Names[arg.ArgType])
+                    print "Syntax error: Invalid parameter type %i (%s) in %s instruction." % (arg.ArgType, ParamType.Names[arg.ArgType], FullName.upper())
                     return None
+            if FullName == "print":
+                CppText += "\\n"
             CppText += "\""
             for i in range(len(pInstruct.Arguments)):
                 arg = pInstruct.Arguments[i]
@@ -615,13 +622,14 @@ class CppWriter():
                 elif arg.ArgType == ParamType.BOOLEAN:
                     CppText += '(%s) ? "True" : "False"' % ArgText[i]
             CppText += ");\n"
-            CppText += IndentText + "glColor3ubv(tt_ColorPen);\n"
-            CppText += IndentText + "DrawPointText(tt_Font, tt_JustifyVert, tt_JustifyHorz, tt_FontHeight, tt_TurtlePos[0], tt_TurtlePos[1], tt_LabelText);\n"
-        elif pInstruct.pProc.FullName == "last":                            # LAST
+            if FullName == "label":
+                CppText += IndentText + "glColor3ubv(tt_ColorPen);\n"
+                CppText += IndentText + "DrawPointText(tt_Font, tt_JustifyVert, tt_JustifyHorz, tt_FontHeight, tt_TurtlePos[0], tt_TurtlePos[1], tt_LabelText);\n"
+        elif FullName == "last":                                            # LAST
             CppText += "%s.Last()" % ArgText[0]
-        elif pInstruct.pProc.FullName == "left":                            # LEFT
+        elif FullName == "left":                                            # LEFT
             CppText += IndentText + "tt_TurtleDir -= %s;\n" % ArgText[0]
-        elif pInstruct.pProc.FullName == "list":                            # LIST
+        elif FullName == "list":                                            # LIST
             CppText += "CList<%s>(" % self.LogoState.NumType
             if len(pInstruct.Arguments) <= 4:
                 for i in range(len(pInstruct.Arguments)):
@@ -633,15 +641,15 @@ class CppWriter():
                 for i in range(len(pInstruct.Arguments)):
                     CppText += ", (double) %s" % ArgText[i]
             CppText += ")"
-        elif pInstruct.pProc.FullName == "ln":                              # LN
+        elif FullName == "ln":                                              # LN
             CppText += "log%s(%s)" % (NumTypeMath, ArgText[0])
-        elif pInstruct.pProc.FullName in ("localmake", "make"):             # LOCALMAKE, MAKE
+        elif FullName in ("localmake", "make"):                             # LOCALMAKE, MAKE
             CppText += IndentText + pInstruct.pMakeVar.CppName + " = " + ArgText[1] + ";\n"
-        elif pInstruct.pProc.FullName == "log10":                           # LOG10
+        elif FullName == "log10":                                           # LOG10
             CppText += "log10%s(%s)" % (NumTypeMath, ArgText[0])
-        elif pInstruct.pProc.FullName == "lput":                            # FPUT
+        elif FullName == "lput":                                            # FPUT
             CppText += "CList<%s>(%s, %s)" % (self.LogoState.NumType, ArgText[1], ArgText[0])
-        elif pInstruct.pProc.FullName == "mdarray":                         # MDARRAY
+        elif FullName == "mdarray":                                         # MDARRAY
             if pInstruct.ReturnArrayDim is None:
                 print "Internal error: unknown array dimensions for 'MDARRAY %s'" % ArgText[0]
                 return None
@@ -652,7 +660,7 @@ class CppWriter():
             if listargtext == None:
                 return None
             CppText += "CArray<%s,%i>(%s)" % (self.LogoState.NumType, pInstruct.ReturnArrayDim, listargtext)
-        elif pInstruct.pProc.FullName == "mditem":                          # MDITEM
+        elif FullName == "mditem":                                          # MDITEM
             if pInstruct.Arguments[1].Elements[0].Type != ElemType.VAR_VALUE:
                 print "Syntax error: MDITEM requires a variable for the array input, but '%s' was given" % pInstruct.Arguments[1].Elements[0].Text
                 return None
@@ -664,7 +672,7 @@ class CppWriter():
             if listargtext == None:
                 return None
             CppText += "%s.Get(%s)" % (ArgText[1], listargtext)
-        elif pInstruct.pProc.FullName == "mdsetitem":                       # MDSETITEM
+        elif FullName == "mdsetitem":                                       # MDSETITEM
             if pInstruct.Arguments[1].Elements[0].Type != ElemType.VAR_VALUE:
                 print "Syntax error: MDSETITEM requires a variable for the array input, but '%s' was given" % pInstruct.Arguments[1].Elements[0].Text
                 return None
@@ -676,11 +684,11 @@ class CppWriter():
             if listargtext == None:
                 return None
             CppText += IndentText + "%s.Set(%s, %s);\n" % (ArgText[1], ArgText[2], listargtext)
-        elif pInstruct.pProc.FullName == "minus":                           # MINUS
+        elif FullName == "minus":                                           # MINUS
             CppText += "-(%s)" % ArgText[0]
-        elif pInstruct.pProc.FullName == "not":                             # NOT
+        elif FullName == "not":                                             # NOT
             CppText += "!(%s)" % ArgText[0]
-        elif pInstruct.pProc.FullName == "or":                              # OR
+        elif FullName == "or":                                              # OR
             bFirst = True
             for argtext in ArgText:
                 if bFirst is True:
@@ -688,53 +696,53 @@ class CppWriter():
                 else:
                     CppText += " || "
                 CppText += "(%s)" % argtext
-        elif pInstruct.pProc.FullName == "output":                          # OUTPUT
+        elif FullName == "output":                                          # OUTPUT
             CppText += IndentText + "return %s;\n" % ArgText[0]
-        elif pInstruct.pProc.FullName == "penup":                           # PENUP
+        elif FullName == "penup":                                           # PENUP
             CppText += IndentText + "tt_PenDown = false;\n"
-        elif pInstruct.pProc.FullName == "pendown":                         # PENDOWN
+        elif FullName == "pendown":                                         # PENDOWN
             CppText += IndentText + "tt_PenDown = true;\n"
-        elif pInstruct.pProc.FullName == "penerase":                        # PENERASE
+        elif FullName == "penerase":                                        # PENERASE
             CppText += IndentText + "tt_ActiveColor = tt_ColorBackground;\n"
-        elif pInstruct.pProc.FullName == "penpaint":                        # PENPAINT
+        elif FullName == "penpaint":                                        # PENPAINT
             CppText += IndentText + "tt_ActiveColor = tt_ColorPen;\n"
-        elif pInstruct.pProc.FullName == "pick":                            # PICK
+        elif FullName == "pick":                                            # PICK
             CppText += "%s.Pick()" % ArgText[0]
-        elif pInstruct.pProc.FullName == "pos":                             # POS
+        elif FullName == "pos":                                             # POS
             CppText += "CList<%s>(tt_TurtlePos[0], tt_TurtlePos[1])" % self.LogoState.NumType
-        elif pInstruct.pProc.FullName == "power":                           # POWER
+        elif FullName == "power":                                           # POWER
             CppText += "pow%s(%s, %s)" % (NumTypeMath, ArgText[0], ArgText[1])
-        elif pInstruct.pProc.FullName == "product":                         # PRODUCT
+        elif FullName == "product":                                         # PRODUCT
             CppText += "(%s)" % ArgText[0]
             for argtext in ArgText[1:]:
                 CppText += " * (%s)" % argtext
-        elif pInstruct.pProc.FullName == "quotient":                        # QUOTIENT
+        elif FullName == "quotient":                                        # QUOTIENT
             if len(ArgText) == 1:
                 CppText += "1.0 / (%s)" % ArgText[0]
             else:
                 CppText += "(%s) / (%s)" % (ArgText[0], ArgText[1])
-        elif pInstruct.pProc.FullName == "radarctan":                       # RADARCTAN
+        elif FullName == "radarctan":                                       # RADARCTAN
             if len(ArgText) == 1:
                 CppText += "atan%s(%s)" % (NumTypeMath, ArgText[0])
             else:
                 CppText += "atan2%s(%s, %s)" % (NumTypeMath, ArgText[1], ArgText[0])
-        elif pInstruct.pProc.FullName == "radcos":                          # RADCOS
+        elif FullName == "radcos":                                          # RADCOS
             CppText += "cos%s(%s)" % (NumTypeMath, ArgText[0])
-        elif pInstruct.pProc.FullName == "radsin":                          # RADSIN
+        elif FullName == "radsin":                                          # RADSIN
             CppText += "sin%s(%s)" % (NumTypeMath, ArgText[0])
-        elif pInstruct.pProc.FullName == "random":                          # RANDOM
+        elif FullName == "random":                                          # RANDOM
             if len(ArgText) == 1:
                 CppText += "tt_Random((int) (%s))" % ArgText[0]
             else:
                 CppText += "tt_Random((int) (%s), (int) (%s))" % (ArgText[0], ArgText[1])
-        elif pInstruct.pProc.FullName == "remainder":                       # REMAINDER
+        elif FullName == "remainder":                                       # REMAINDER
             CppText += "(int) (%s) %% (int) (%s)" % (ArgText[0], ArgText[1])
-        elif pInstruct.pProc.FullName == "repcount":                        # REPCOUNT
+        elif FullName == "repcount":                                        # REPCOUNT
             if self.LogoState.InnerLoopIdx == -1:
                 print "Syntax error: REPCOUNT instruction used outside of a FOREVER or REPEAT loop"
                 return None
             CppText += "loop%02i" % self.LogoState.InnerLoopIdx
-        elif pInstruct.pProc.FullName == "repeat":                          # REPEAT
+        elif FullName == "repeat":                                          # REPEAT
             my_counter = self.LogoState.LoopIdx
             self.LogoState.LoopIdx += 1
             CppText += IndentText + "for (int loop%02i=1; loop%02i <= %s; loop%02i++)\n" % (my_counter, my_counter, ArgText[0], my_counter)
@@ -747,29 +755,29 @@ class CppWriter():
                 CppText += codetext
             CppText += IndentText + "}\n"
             self.LogoState.InnerLoopIdx = -1
-        elif pInstruct.pProc.FullName == "rerandom":                        # RERANDOM
+        elif FullName == "rerandom":                                        # RERANDOM
             if len(ArgText) == 0:
                 CppText += IndentText + "srand(0);\n"
             else:
                 CppText += IndentText + "srand((int) (%s));\n" % ArgText[0]
-        elif pInstruct.pProc.FullName == "reverse":                         # REVERSE
+        elif FullName == "reverse":                                         # REVERSE
             CppText += "%s.Reverse()" % ArgText[0]
-        elif pInstruct.pProc.FullName == "right":                           # RIGHT
+        elif FullName == "right":                                           # RIGHT
             CppText += IndentText + "tt_TurtleDir += %s;\n" % ArgText[0]
-        elif pInstruct.pProc.FullName == "round":                           # ROUND
+        elif FullName == "round":                                           # ROUND
             CppText += "round%s(%s)" % (NumTypeMath, ArgText[0])
-        elif pInstruct.pProc.FullName == "setbackground":                   # SETBACKGROUND
+        elif FullName == "setbackground":                                   # SETBACKGROUND
             codetext = self.GetCppBuiltinSetColor(IndentText, pInstruct.Arguments[0], "tt_ColorBackground")
             if codetext is None:
                 return None
             CppText += codetext
-        elif pInstruct.pProc.FullName == "setfont":                         # SETFONT
+        elif FullName == "setfont":                                         # SETFONT
             CppText += IndentText + "tt_Font = %s;\n" % ArgText[0]
-        elif pInstruct.pProc.FullName == "setfontheight":                   # SETFONTHEIGHT
+        elif FullName == "setfontheight":                                   # SETFONTHEIGHT
             CppText += IndentText + "tt_FontHeight = %s;\n" % ArgText[0]
-        elif pInstruct.pProc.FullName == "setheading":                      # SETHEADING
+        elif FullName == "setheading":                                      # SETHEADING
             CppText += IndentText + "tt_TurtleDir = %s;\n" % ArgText[0]
-        elif pInstruct.pProc.FullName == "setitem":                         # SETITEM
+        elif FullName == "setitem":                                         # SETITEM
             if pInstruct.Arguments[1].Elements[0].Type != ElemType.VAR_VALUE:
                 print "Syntax error: destination array for SETITEM instruction can only be a variable"
                 return None
@@ -777,23 +785,23 @@ class CppWriter():
                 print "Logical error: Array '%s' in SETITEM instruction is not 1-dimensional" % pInstruct.Arguments[1].Elements[0].Text
                 return None
             CppText += IndentText + "%s.Set(%s, (int) (%s));\n" % (ArgText[1], ArgText[2], ArgText[0])
-        elif pInstruct.pProc.FullName == "setjustifyvert":                  # SETJUSTIFYVERT
+        elif FullName == "setjustifyvert":                                  # SETJUSTIFYVERT
             CppText += IndentText + "tt_JustifyVert = %s;\n" % ArgText[0]
-        elif pInstruct.pProc.FullName == "setjustifyhorz":                  # SETJUSTIFYHORZ
+        elif FullName == "setjustifyhorz":                                  # SETJUSTIFYHORZ
             CppText += IndentText + "tt_JustifyHorz = %s;\n" % ArgText[0]
-        elif pInstruct.pProc.FullName == "setpencolor":                     # SETPENCOLOR
+        elif FullName == "setpencolor":                                     # SETPENCOLOR
             codetext = self.GetCppBuiltinSetColor(IndentText, pInstruct.Arguments[0], "tt_ColorPen")
             if codetext is None:
                 return None
             CppText += codetext
-        elif pInstruct.pProc.FullName == "setpensize":                      # SETPENSIZE
+        elif FullName == "setpensize":                                      # SETPENSIZE
             CppText += IndentText + "if (tt_PenSize != (float) (%s))\n%s{\n" % (ArgText[0], IndentText)
             CppText += NextIndent + "wrapper_glFlushVertices();\n"
             CppText += NextIndent + "tt_PenSize = (float) (%s);\n" % ArgText[0]
             CppText += NextIndent + "glPointSize(tt_PenSize * fPixelsPerTurtleStep);\n"
             CppText += NextIndent + "glLineWidth(tt_PenSize);\n"
             CppText += IndentText + "}\n"
-        elif pInstruct.pProc.FullName == "setpos":                          # SETPOS
+        elif FullName == "setpos":                                          # SETPOS
             Arg = pInstruct.Arguments[0]
             elem0type = Arg.Elements[0].Type
             UpdateTurtle = ""
@@ -819,34 +827,34 @@ class CppWriter():
                 print "Internal error: invalid element type %i '%s' in a List argument for SETPOS." % (elem0type, ElemType.Names[elem0type])
                 return None
             CppText += self.GetCppBuiltinJump(IndentText, UpdateTurtle)
-        elif pInstruct.pProc.FullName == "setscrunch":                      # SETSCRUNCH
+        elif FullName == "setscrunch":                                      # SETSCRUNCH
             CppText += IndentText + "tt_ScrunchXY[0] = %s;\n" % ArgText[0]
             CppText += IndentText + "tt_ScrunchXY[1] = %s;\n" % ArgText[1]
-        elif pInstruct.pProc.FullName == "setxy":                           # SETXY
+        elif FullName == "setxy":                                           # SETXY
             UpdateTurtle =  NextIndent + "tt_TurtlePos[0] = %s;\n" % ArgText[0]
             UpdateTurtle += NextIndent + "tt_TurtlePos[1] = %s;\n" % ArgText[1]
             CppText += self.GetCppBuiltinJump(IndentText, UpdateTurtle)
-        elif pInstruct.pProc.FullName == "setx":                            # SETX
+        elif FullName == "setx":                                            # SETX
             UpdateTurtle = NextIndent + "tt_TurtlePos[0] = %s;\n" % ArgText[0]
             CppText += self.GetCppBuiltinJump(IndentText, UpdateTurtle)
-        elif pInstruct.pProc.FullName == "sety":                            # SETY
+        elif FullName == "sety":                                            # SETY
             UpdateTurtle = NextIndent + "tt_TurtlePos[1] = %s;\n" % ArgText[0]
             CppText += self.GetCppBuiltinJump(IndentText, UpdateTurtle)
-        elif pInstruct.pProc.FullName == "sin":                             # SIN
+        elif FullName == "sin":                                             # SIN
             CppText += "sin%s((%s) * tt_RadDegree)" % (NumTypeMath, ArgText[0])
-        elif pInstruct.pProc.FullName == "sqrt":                            # SQRT
+        elif FullName == "sqrt":                                            # SQRT
             CppText += "sqrt%s(%s)" % (NumTypeMath, ArgText[0])
-        elif pInstruct.pProc.FullName == "stop":                            # STOP
+        elif FullName == "stop":                                            # STOP
             CppText += IndentText + "return;\n"
-        elif pInstruct.pProc.FullName == "sum":                             # SUM
+        elif FullName == "sum":                                             # SUM
             CppText += "(%s)" % ArgText[0]
             for argtext in ArgText[1:]:
                 CppText += " + (%s)" % argtext
-        elif pInstruct.pProc.FullName == "tag":                             # TAG
+        elif FullName == "tag":                                             # TAG
             CppText += "tag_%s:\n" % ArgText[0][1:-1]
-        elif pInstruct.pProc.FullName == "test":                            # TEST
+        elif FullName == "test":                                            # TEST
             CppText += IndentText + "tt_TestValue = (bool) (%s);\n" % ArgText[0]
-        elif pInstruct.pProc.FullName == "towards":                         # TOWARDS
+        elif FullName == "towards":                                         # TOWARDS
             Arg = pInstruct.Arguments[0]
             elem0type = Arg.Elements[0].Type
             if elem0type == ElemType.NUMBER:
@@ -864,10 +872,10 @@ class CppWriter():
             else:
                 print "Internal error: invalid element type %i '%s' in a List argument for TOWARDS." % (elem0type, ElemType.Names[elem0type])
                 return None
-        elif pInstruct.pProc.FullName == "wait":                            # WAIT
+        elif FullName == "wait":                                            # WAIT
             CppText += IndentText + "SDL_Delay((int) ((%s) * 1000 / 60));\n" % ArgText[0]
-        elif pInstruct.pProc.FullName in ("while", "until"):                # WHILE, UNTIL
-            if pInstruct.pProc.FullName == "while":
+        elif FullName in ("while", "until"):                                # WHILE, UNTIL
+            if FullName == "while":
                 CppText += IndentText + "while (%s) {\n" % ArgText[0]
             else:
                 CppText += IndentText + "while (!(%s)) {\n" % ArgText[0]
@@ -877,13 +885,13 @@ class CppWriter():
                     return None
                 CppText += codetext
             CppText += IndentText + "}\n"
-        elif pInstruct.pProc.FullName == "window":                          # WINDOW
+        elif FullName == "window":                                          # WINDOW
             CppText += IndentText + "tt_UseWrap = false;\n"
-        elif pInstruct.pProc.FullName == "wrap":                            # WRAP
+        elif FullName == "wrap":                                            # WRAP
             CppText += IndentText + "tt_UseWrap = true;\n"
-        elif pInstruct.pProc.FullName == "xcor":                            # XCOR
+        elif FullName == "xcor":                                            # XCOR
             CppText += "tt_TurtlePos[0]"
-        elif pInstruct.pProc.FullName == "ycor":                            # YCOR
+        elif FullName == "ycor":                                            # YCOR
             CppText += "tt_TurtlePos[1]"
         else:
             print "Internal error: built-in instruction named '%s' is not implemented" % pInstruct.Name
