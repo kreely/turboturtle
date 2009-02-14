@@ -12,12 +12,18 @@
 
 #include <SDL.h>
 #include <SDL_opengl.h>
+#if defined(__linux__)
+  #define GLX_GLXEXT_PROTOTYPES
+  #include <GL/glx.h>
+  #include <GL/glxext.h>
+#endif
 #include "wrapper_api.h"
 
 // static global variables
 static bool bFullscreen = false;
 static bool bReturnWhenDone = false;
 static bool bPrintFPS = false;
+static bool bVSync = false;
 
 // static functions
 static bool ParseArgs(int argc, void *argv[]);
@@ -109,6 +115,11 @@ bool ParseArgs(int argc, void *argv[])
             bReturnWhenDone = true;
         else if (strcmp((char *) argv[i], "--printfps") == 0)
             bPrintFPS = true;
+        else if (strcmp((char *) argv[i], "--vsync") == 0)
+        {
+            tt_FramesPerSec = 0.0;
+            bVSync = true;
+        }
         else if (strcmp((char *) argv[i], "--help") == 0)
         {
             PrintHelp((char *) argv[0]);
@@ -144,6 +155,7 @@ void PrintHelp(const char *pchProgName)
     printf("  --help                    - Print this message\n");
     printf("  --resolution XSIZE YSIZE  - Set the window or fullscreen resolution to XSIZE x YSIZE\n");
     printf("  --fullscreen              - Set fullscreen video mode\n");
+    printf("  --vsync                   - Wait for vertical retrace to update screen\n");
     printf("  --exitwhendone            - Exit immediately when done instead of waiting for Escape\n");
     printf("\n");
 }
@@ -170,6 +182,10 @@ bool InitSDL(void)
     SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);    // at least 5 bits of green
     SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);     // at least 5 bits of blue
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);  // use double-buffered screen
+#if !defined(__linux__)
+    if (bVSync)
+        SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1);  // swap buffers on vsync to avoid tearing, only works on Windows
+#endif
 
     iFlags = SDL_OPENGL;
     if (bFullscreen)
@@ -195,6 +211,11 @@ bool InitSDL(void)
             return false;
             }
         }
+
+#if defined(__linux__)
+    if (bVSync)
+        glXSwapIntervalSGI(1);  // only works on Linux
+#endif
 
     // set window name
     SDL_WM_SetCaption("Turbo Turtle LOGO Animation", "TurboTurtle");
