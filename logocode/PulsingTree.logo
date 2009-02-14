@@ -1,0 +1,53 @@
+; Blowing Tree, based on Leaning Tree
+
+.setspecial "windowsize 400
+.setspecial "framespersec 80
+
+Make "Levels 7
+Make "Accel 0.02
+Make "Limit 1.0      ; +- limit for rate of change of Theta, in Degrees per frame
+Make "Ampl  0.05     ; +- limit for difference between left/right ratios
+Init
+Forever [ Go Advance ClearScreen ]
+
+To Init
+  make "ArrayLen (Power 2 :Levels)-1
+  make "Thetas Array :ArrayLen
+  make "Deltas Array :ArrayLen
+  Repeat :ArrayLen [ SetItem # :Thetas 0 ]
+  Repeat :ArrayLen [ SetItem # :Deltas (Random 100) / 100.0 ]
+End
+
+To Go
+  PenUp SetXY 0 -160
+  Make "Index 0
+  Make "Angle 50 Tree 85 1               ; initial angle of 50 shown in red
+End
+
+To Tree :Length :Level
+  If :Length < 4 [Stop]                  ; ends recursion if branch length too small
+  SetPenSize :Length/9                   ; reduce pen width as branch length gets smaller
+  SetPC TreeCol :Length                  ; branch color depends on length
+  PenDown Forward :Length
+  If :Level <= :Levels [ Make "Index :Index + 1 ]
+  LocalMake "RRatio 0.75 + :Ampl * Cos Item :Index :Thetas
+  Left :Angle/2
+  Tree :Length*(1.5-:RRatio) :Level+1    ; Left branch length
+  Right :Angle
+  Tree :Length*:RRatio :Level+1          ; Right branch length
+  Left :Angle/2 PenUp Back :Length       ; return to starting point
+End
+
+To TreeCol :Length
+  Make "Green Round 2.5*(100-:Length)    ; green depends on length
+  Output ( List 255 :Green 0 )           ; red set to 255 and blue to 0
+End
+
+To Advance
+  Repeat :ArrayLen [
+    SetItem # :Thetas Item # :Thetas + Item # :Deltas
+    SetItem # :Deltas Item # :Deltas + Gaussian * :Accel
+    If Item # :Deltas > :Limit [ SetItem # :Deltas :Limit ]
+    If Item # :Deltas < -:Limit [ SetItem # :Deltas Minus :Limit ]
+    ]
+End
