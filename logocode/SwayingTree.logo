@@ -1,0 +1,34 @@
+; Swaying Tree, based on Leaning Tree
+
+.setspecial "windowsize 400
+.setspecial "framespersec 50
+
+make "Theta 0
+make "RLength 0.85
+make "delta 1.7
+Forever [ Go Advance ClearScreen ]
+
+To Go
+  PenUp SetXY (0.75-:RLength)*1000 -160 Right (:RLength - 0.75) * 50
+  Make "Angle 50 Tree 85                 ; initial angle of 50 shown in red
+End
+
+To Tree :Length
+  If :Length < 4 [Stop]                  ; ends recursion if branch length too small
+  SetPenSize :Length/9                   ; reduce pen width as branch length gets smaller
+  SetPC TreeCol :Length                  ; branch color depends on length
+  PenDown Forward :Length Left :Angle/2
+  Tree :Length*(1.5-:RLength) Right :Angle   ; short branch length
+  Tree :Length*:RLength Left :Angle/2        ; long branch length
+  PenUp Back :Length                     ; return to starting point
+End
+
+To TreeCol :Length
+  Make "Green Round 2.5*(100-:Length)    ; green depends on length
+  Output ( List 255 :Green 0 )           ; red set to 255 and blue to 0
+End
+
+To Advance
+  Make "Theta :Theta + :delta
+  Make "RLength 0.75 + 0.1 * cos :Theta
+End
