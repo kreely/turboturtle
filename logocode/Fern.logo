@@ -2,6 +2,7 @@
 
 .setspecial "windowsize 400
 .setspecial "framespersec 30
+.setspecial "highprecision 1
 
 Init Forever [ PenUp SetXY 0 -170 PenDown Fern 440 :fernangle :smallratio :bigratio Sliders Advance cs]
 
@@ -38,7 +39,7 @@ end
 To Init
   make "fernangle 2.0
   make "bigratio 0.9
-  make "smallratio 0.3
+  make "smallratio 0.25
   make "dangle (-0.04 * (0.01 * random 100))
   make "dbig 0
   make "dsmall 0
