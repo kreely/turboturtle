@@ -1,0 +1,79 @@
+; Diatoms, based on a Win32 screen saver by Matt Grice
+
+.setspecial "WindowSize 200
+.setspecial "framespersec 60
+
+Make "NumDiatoms 200
+Make "MaxStartVelocity 0.4     ; turtle steps per frame, perpendicular to force of gravity
+Make "MaxRotation 4.0          ; degrees per frame
+Make "Gravity 0.015            ; steps per frame squared
+Init Forever [ Go Advance ClearScreen ]
+
+To Init
+  Make "Colors Array :NumDiatoms
+  Make "PositionX Array :NumDiatoms
+  Make "PositionY Array :NumDiatoms
+  Make "VelocityX Array :NumDiatoms
+  Make "VelocityY Array :NumDiatoms
+  Make "Lengths Array :NumDiatoms
+  Make "Points Array :NumDiatoms
+  Make "Angle Array :NumDiatoms
+  Make "DeltaAngle Array :NumDiatoms
+  PenUp
+  Repeat :NumDiatoms [
+    SetItem # :Colors Random 360
+    LocalMake "PRadius 70 + Random 40
+    LocalMake "PAngle Random 360
+    SetItem # :PositionX :PRadius * Sin :PAngle
+    SetItem # :PositionY :PRadius * Cos :PAngle
+    SetXY Item # :PositionX Item # :PositionY
+    LocalMake "Direction Towards [0 0] + 90
+    LocalMake "Speed ((Random 200) - 100) * :MaxStartVelocity / 100.0
+    SetItem # :VelocityX :Speed * Sin :Direction
+    SetItem # :VelocityY :Speed * Cos :Direction
+    SetItem # :Lengths 6 + Random 4
+    SetItem # :Points Pick [5 7 9 11]
+    SetItem # :Angle 0
+    SetItem # :DeltaAngle ((Random 200) - 100) * :MaxRotation / 100.0
+  ]
+End
+
+To Go
+  ; draw each Diatom
+  Repeat :NumDiatoms [
+    PenUp SetXY Item # :PositionX Item # :PositionY
+    SetPC AngleColor Item # :Colors
+    SetHeading Item # :Angle
+    Diatom Item # :Lengths Item # :Points
+  ]
+End
+
+To Advance
+  ; advance the state of each Diatom
+  Repeat :NumDiatoms [
+    ; advance position according to velocity
+    SetItem # :PositionX Item # :PositionX + Item # :VelocityX
+    SetItem # :PositionY Item # :PositionY + Item # :VelocityY
+    ; advance velocity according to gravity
+    PenUp SetXY Item # :PositionX Item # :PositionY
+    LocalMake "GravHeading Towards [ 0 0 ]
+    SetItem # :VelocityX Item # :VelocityX + :Gravity * Sin :GravHeading
+    SetItem # :VelocityY Item # :VelocityY + :Gravity * Cos :GravHeading
+    ; advance rotation angle
+    SetItem # :Angle Item # :Angle + Item # :DeltaAngle
+  ]
+End
+
+To Diatom :Length :Points
+  PenUp Forward :Length / 2 Right 180 - (90 / :Points) PenDown
+  Repeat :Points [ Forward :Length Right 180 - (180 / :Points) ]
+  PenUp Left 180 - (90 / :Points) Back :Length / 2
+End
+
+To AngleColor :Theta
+  Make "Red Abs 255 *Cos (:Theta)
+  Make "Gre Abs 255 *Cos (:Theta + 120)
+  Make "Blu Abs 255 *Cos (:Theta + 240)
+  Output ( List :Red :Gre :Blu )
+End
+
