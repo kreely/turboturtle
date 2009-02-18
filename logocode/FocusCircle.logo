@@ -1,0 +1,52 @@
+; FocusCircle.logo
+; Copyright (C) 2009 Richard Goedeken (Richard@fascinationsoftware.com)
+
+; This program is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, version 3.
+
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+
+; You should have received a copy of the GNU General Public License
+; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+.setspecial "windowsize 300
+.setspecial "framespersec 80
+
+new forever[penup circle advance cs]
+
+to new
+  make "px 0
+  make "py 0
+  make "dx 0.01 * ((random 0 200) - 100)
+  make "dy 0.01 * ((random 0 200) - 100)
+end
+
+to advance
+  make "px :px + :dx
+  make "py :py + :dy
+  if or :px < -100 :px > 100 [make "dx -:dx]
+  if or :py < -100 :py > 100 [make "dy -:dy]
+end
+
+to circle
+  for [i 0 360 2] [
+    make "x product 100 sin :i
+    make "y product 100 cos :i
+    setpos (list :x :y)
+    setheading towards (list :px :py)
+    setpc AngCol heading
+    PenDown fd 42
+  ]
+end
+
+To AngCol :Theta
+  Make "Red Abs 255 *Cos (:Theta)
+  Make "Gre Abs 255 *Cos (:Theta + 120)
+  Make "Blu Abs 255 *Cos (:Theta + 240)
+  Output (List :Red :Gre :Blu)
+End
+
