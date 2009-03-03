@@ -38,7 +38,7 @@ static bool bPrintFPS = false;
 static bool bVSync = false;
 
 // static functions
-static bool ParseArgs(int argc, void *argv[]);
+static bool ParseArgs(int argc, char **argv);
 static void PrintHelp(const char *pchProgName);
 static bool InitSDL(void);
 
@@ -51,7 +51,7 @@ bool CheckExitKey(void);
 ///////////////////////////////////////////////////////////////////////////////
 // Main program function
 
-int main(int argc, void *argv[])
+int main(int argc, char **argv)
 {
     if (!ParseArgs(argc, argv))
         return 1;
@@ -108,7 +108,7 @@ bool CheckExitKey(void)
 ///////////////////////////////////////////////////////////////////////////////
 // Helper functions for the Main wrapper
 
-bool ParseArgs(int argc, void *argv[])
+bool ParseArgs(int argc, char **argv)
 {
     bool bCustomRes = false;
 

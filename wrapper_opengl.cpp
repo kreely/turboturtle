@@ -309,7 +309,7 @@ void wrapper_glDrawLineWrap(float *pfOrigPos, float *pfNewPos, bool bWrapEnabled
                 fEdgeY = 0.0;
                 bWrapX = bWrapY = true;
             }
-            else if (fInterceptY > 0.0 and fInterceptY < (float) iViewHeight)
+            else if (fInterceptY > 0.0 && fInterceptY < (float) iViewHeight)
             {
                 fEdgeX = 0.0;
                 fEdgeY = fInterceptY;
@@ -325,7 +325,7 @@ void wrapper_glDrawLineWrap(float *pfOrigPos, float *pfNewPos, bool bWrapEnabled
                 fEdgeY = (float) iViewHeight;
                 bWrapX = bWrapY = true;
             }
-            else if (fInterceptX > 0.0 and fInterceptX < (float) iViewWidth)
+            else if (fInterceptX > 0.0 && fInterceptX < (float) iViewWidth)
             {
                 fEdgeX = fInterceptX;
                 fEdgeY = (float) iViewHeight;
@@ -341,7 +341,7 @@ void wrapper_glDrawLineWrap(float *pfOrigPos, float *pfNewPos, bool bWrapEnabled
                 fEdgeY = (float) iViewHeight;
                 bWrapX = bWrapY = true;
             }
-            else if (fInterceptY > 0.0 and fInterceptY < (float) iViewHeight)
+            else if (fInterceptY > 0.0 && fInterceptY < (float) iViewHeight)
             {
                 fEdgeX = (float) iViewWidth;
                 fEdgeY = fInterceptY;
@@ -357,7 +357,7 @@ void wrapper_glDrawLineWrap(float *pfOrigPos, float *pfNewPos, bool bWrapEnabled
                 fEdgeY = 0.0;
                 bWrapX = bWrapY = true;
             }
-            else if (fInterceptX > 0.0 and fInterceptX < (float) iViewWidth)
+            else if (fInterceptX > 0.0 && fInterceptX < (float) iViewWidth)
             {
                 fEdgeX = fInterceptX;
                 fEdgeY = 0.0;
@@ -434,7 +434,7 @@ void wrapper_glDrawLineWrap(double *pdOrigPos, double *pdNewPos, bool bWrapEnabl
                 dEdgeY = 0.0;
                 bWrapX = bWrapY = true;
             }
-            else if (dInterceptY > 0.0 and dInterceptY < (double) iViewHeight)
+            else if (dInterceptY > 0.0 && dInterceptY < (double) iViewHeight)
             {
                 dEdgeX = 0.0;
                 dEdgeY = dInterceptY;
@@ -450,7 +450,7 @@ void wrapper_glDrawLineWrap(double *pdOrigPos, double *pdNewPos, bool bWrapEnabl
                 dEdgeY = (double) iViewHeight;
                 bWrapX = bWrapY = true;
             }
-            else if (dInterceptX > 0.0 and dInterceptX < (double) iViewWidth)
+            else if (dInterceptX > 0.0 && dInterceptX < (double) iViewWidth)
             {
                 dEdgeX = dInterceptX;
                 dEdgeY = (double) iViewHeight;
@@ -466,7 +466,7 @@ void wrapper_glDrawLineWrap(double *pdOrigPos, double *pdNewPos, bool bWrapEnabl
                 dEdgeY = (double) iViewHeight;
                 bWrapX = bWrapY = true;
             }
-            else if (dInterceptY > 0.0 and dInterceptY < (double) iViewHeight)
+            else if (dInterceptY > 0.0 && dInterceptY < (double) iViewHeight)
             {
                 dEdgeX = (double) iViewWidth;
                 dEdgeY = dInterceptY;
@@ -482,7 +482,7 @@ void wrapper_glDrawLineWrap(double *pdOrigPos, double *pdNewPos, bool bWrapEnabl
                 dEdgeY = 0.0;
                 bWrapX = bWrapY = true;
             }
-            else if (dInterceptX > 0.0 and dInterceptX < (double) iViewWidth)
+            else if (dInterceptX > 0.0 && dInterceptX < (double) iViewWidth)
             {
                 dEdgeX = dInterceptX;
                 dEdgeY = 0.0;
