@@ -143,6 +143,7 @@ bool InitGL(bool print_fps)
     // clear the screen
     glClear(GL_COLOR_BUFFER_BIT);
     SDL_GL_SwapBuffers();
+    glClear(GL_COLOR_BUFFER_BIT);
     glColor3ub(255, 255, 255);
 
     // mark the start time

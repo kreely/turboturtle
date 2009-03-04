@@ -154,6 +154,7 @@ class CppWriter():
             self.OutputText += "char tt_LabelText[1024];\n"
         self.OutputText += "\n"
         # then write out definitions for static functions which might be used by the logo code
+        self.OutputText += "#ifdef WIN32\n  inline double round(double x) { return floor(x + 0.5); }\n  inline float roundf(float x) { return floorf(x + 0.5); }\n#endif\n"
         if self.LogoState.bNeedTowardsFunc:
             self.OutputText += "static %s tt_Towards(const CList<%s> &list)\n{\n" % (self.LogoState.NumType, self.LogoState.NumType)
             self.OutputText += IndentText + "return atan2(list[0] - tt_TurtlePos[0], list[1] - tt_TurtlePos[1]) * tt_DegreeRad;\n}\n\n"
@@ -564,7 +565,7 @@ class CppWriter():
         elif FullName == "goto":                                            # GOTO
             CppText += IndentText + "goto tag_%s;\n" % ArgText[0][1:-1]
         elif FullName == "heading":                                         # HEADING
-            CppText += "(tt_TurtleDir < 0.0 ? 360.0+fmod(tt_TurtleDir,360.0) : fmod(tt_TurtleDir,360.0))"
+            CppText += "(tt_TurtleDir < 0.0 ? 360.0+fmod((float) tt_TurtleDir, (float) 360.0) : fmod((float) tt_TurtleDir, (float) 360.0))"
         elif FullName == "home":                                            # HOME
             CppText += IndentText + "tt_TurtlePos[0] = tt_TurtlePos[1] = 0.5;\n"
             CppText += IndentText + "tt_TurtleDir = 0.0;\n"
